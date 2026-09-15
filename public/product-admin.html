@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>제품 관리</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div><h1>제품 관리</h1><p>6등급 이상 관리자 전용</p></div>
+    <div class="header-actions"><a class="link" href="/">현황판</a><a class="link" href="/control.html">수량 입력</a><button class="logout-button" onclick="logout()">로그아웃</button></div>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="panel-title"><div><h2>새로운 제품코드 추가</h2><p class="help-text">제품코드, 제품명, 목표수량을 입력하세요.</p></div></div>
+      <form id="addForm" class="form-grid product-add-form">
+        <div><label>제품코드 *</label><input id="newCode" maxlength="50" required></div>
+        <div><label>제품명 *</label><input id="newName" maxlength="100" required></div>
+        <div><label>현재수량 *</label><input id="newQuantity" type="number" min="0" step="1" value="0" required></div>
+        <div><label>목표수량 *</label><input id="newTarget" type="number" min="0" step="1" required></div>
+        <div><label>상태 *</label><select id="newStatus" required><option value="대기">대기</option><option value="생산중">생산중</option><option value="수리중">수리중</option><option value="완료">완료</option><option value="정지">정지</option></select></div>
+        <div class="full"><button class="auth-button" type="submit">제품 추가</button></div>
+      </form>
+      <p id="addMessage" class="auth-message"></p>
+    </section>
+    <section class="panel">
+      <div class="panel-title"><div><h2>제품 목록 수정</h2><p class="help-text">제품코드, 제품명, 현재수량, 목표수량, 상태를 수정하거나 제품을 삭제할 수 있습니다.</p></div><button class="auth-button"  onclick="loadProducts()">새로고침</button></div>
+      <div class="table-wrap"><table class="admin-table product-edit-table"><thead><tr><th>ID</th><th>제품코드</th><th>제품명</th><th>현재수량</th><th>목표수량</th><th>상태</th><th>관리</th></tr></thead><tbody id="productTable"></tbody></table></div>
+      <p id="emptyMessage" class="help-text hidden">등록된 제품이 없습니다.</p>
+    </section>
+  </main>
+  <script>
+    let products = [];
+    const table = document.getElementById('productTable');
+    function h(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;'); }
+    function statusText(status) { return { 생산중: '생산중', 수리중: '수리중', 완료: '완료', 대기: '대기', 정지: '정지' }[status] || status; }
+    function message(id, text, type) { const element = document.getElementById(id); element.textContent = text; element.className = `auth-message ${type || ''}`; }
+
+    async function loadProducts() {
+      const res = await fetch('/api/products');
+      if (res.status === 401) { location.href = '/login.html'; return; }
+      if (res.status === 403) { alert('6등급 이상 관리자 권한이 필요합니다.'); location.href = '/'; return; }
+      if (!res.ok) { message('addMessage', '제품 목록을 불러오지 못했습니다.', 'error'); return; }
+      products = await res.json();
+      document.getElementById('emptyMessage').classList.toggle('hidden', products.length > 0);
+      table.innerHTML = products.map(product => `<tr><td>${product.id}</td><td><input id="code-${product.id}" value="${h(product.product_code)}" maxlength="50"></td><td><input id="name-${product.id}" value="${h(product.product_name)}" maxlength="100"></td><td><input id="quantity-${product.id}" type="number" min="0" step="1" value="${product.quantity}"></td><td><input id="target-${product.id}" type="number" min="0" step="1" value="${product.target_quantity}"></td><td><select id="status-${product.id}"><option value="대기" ${product.status === '대기' ? 'selected' : ''}>대기</option><option value="생산중" ${product.status === '생산중' ? 'selected' : ''}>생산중</option><option value="수리중" ${product.status === '수리중' ? 'selected' : ''}>수리중</option><option value="완료" ${product.status === '완료' ? 'selected' : ''}>완료</option><option value="정지" ${product.status === '정지' ? 'selected' : ''}>정지</option></select></td><td class="admin-actions"><button onclick="saveProduct(${product.id})">저장</button><button onclick="deleteProduct(${product.id})">삭제</button></td></tr>`).join('');
+    }
+
+    async function saveProduct(id) {
+      const body = { productCode: document.getElementById(`code-${id}`).value, productName: document.getElementById(`name-${id}`).value, quantity: document.getElementById(`quantity-${id}`).value, targetQuantity: document.getElementById(`target-${id}`).value, status: document.getElementById(`status-${id}`).value };
+      const res = await fetch(`/api/admin/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || '제품 수정에 실패했습니다.'); return; }
+      await loadProducts();
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('이 제품을 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.')) return;
+      const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || '제품 삭제에 실패했습니다.'); return; }
+      await loadProducts();
+    }
+
+    document.getElementById('addForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const res = await fetch('/api/admin/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productCode: newCode.value, productName: newName.value, quantity: newQuantity.value, targetQuantity: newTarget.value, status: newStatus.value }) });
+      const data = await res.json();
+      if (!res.ok) { message('addMessage', data.error || '제품 추가에 실패했습니다.', 'error'); return; }
+      event.target.reset(); message('addMessage', '제품이 추가되었습니다.', 'success'); await loadProducts();
+    });
+
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html?logged_out=1'; }
+    loadProducts();
+  </script>
+</body>
+</html>

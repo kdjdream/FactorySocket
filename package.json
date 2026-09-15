@@ -1,0 +1,16 @@
+{
+  "name": "factory-realtime-monitor",
+  "version": "1.3.0",
+  "description": "Factory quantity real-time monitor with registration approval, profile editing and master administration",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "mariadb": "^3.4.5",
+    "mysql2": "^3.14.0",
+    "ws": "^8.18.3"
+  }
+}

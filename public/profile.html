@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>회원정보 수정</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-body">
+    <main class="auth-container wide">
+        <section class="auth-card">
+            <h1>회원정보 수정</h1>
+            <p id="statusMessage" class="notice"></p>
+            <form id="profileForm" class="form-grid">
+                <div><label>아이디</label><input id="username" disabled></div>
+                <div><label>이름 *</label><input id="name" required maxlength="100"></div>
+                <div><label>지역 *</label><input id="region" required maxlength="100"></div>
+                <div><label>회사 *</label><input id="company" required maxlength="150"></div>
+                <div><label>직위 *</label><input id="position" required maxlength="100"></div>
+                <div><label>전화번호 *</label><input id="phone" type="tel" inputmode="tel"
+                        pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}" required></div>
+                <div class="full"><label>이메일 주소 *</label><input id="email" type="email" maxlength="254" required></div>
+                <div><label>기존 비밀번호</label><input id="currentPassword" type="password" maxlength="100"><small>새 비밀번호로 변경할 때 입력하세요.</small></div>
+                <div><label>새 비밀번호</label><input id="password" type="password" minlength="8" maxlength="100"><small>변경하지 않으려면 비워두세요.</small></div>
+                <div><label>새 비밀번호 확인</label><input id="passwordConfirm" type="password" minlength="8" maxlength="100"></div>
+                <div><label>현재 등급</label><input id="permissionLevel" disabled></div>
+                <div><label>회원상태</label><input id="status" disabled></div>
+                <div class="full profile-actions"><button class="auth-button" type="submit">정보 저장</button> <button class="auth-button" type="button" id="cancelButton">취소</button> <button class="auth-button" type="button" id="reapplyButton" style="display:none">재신청</button> <button class="auth-button" type="button" id="withdrawButton" style="display:none">탈퇴 신청</button> <button class="auth-button" type="button" id="cancelWithdrawButton" style="display:none">탈퇴 취소</button></div>
+            </form>
+            <p id="message" class="auth-message"></p>
+            <div class="auth-links"><a id="homeLink" href="/">현황판</a><a href="/api/logout"
+                    onclick="event.preventDefault();logout()">로그아웃</a></div>
+        </section>
+    </main>
+    <script>
+        const ids = ['username', 'name', 'region', 'company', 'position', 'phone', 'email', 'status'];
+        let originalUser = null;
+        function setFields(user) { ids.forEach(id => document.getElementById(id).value = user[id] || ''); document.getElementById('status').value = { PENDING: '승인대기', APPROVED: '승인', REJECTED: '반려', SUSPENDED: '정지', WITHDRAWAL_PENDING: '탈퇴신청' }[user.status] || user.status || ''; document.getElementById('permissionLevel').value = `${Number(user.permission_level || user.permissionLevel || 1)}등급`; }
+        function clearPasswordFields() { document.getElementById('currentPassword').value = ''; document.getElementById('password').value = ''; document.getElementById('passwordConfirm').value = ''; }
+        async function load() { const res = await fetch('/api/me'); if (res.status === 401) { location.href = '/login.html'; return; } const d = await res.json(); originalUser = { ...d.user }; setFields(originalUser); document.getElementById('statusMessage').textContent = originalUser.status === 'PENDING' ? '현재 가입 승인 대기 중입니다. 관리자 승인 전에도 이 페이지에서 정보를 수정할 수 있습니다.' : originalUser.status === 'REJECTED' ? '현재 가입 승인이 반려 중입니다. 회원정보를 수정한 후 재신청할 수 있습니다.' : originalUser.status === 'WITHDRAWAL_PENDING' ? '현재 탈퇴 신청 처리 중입니다. 탈퇴를 취소하려면 탈퇴 취소를 선택하세요.' : originalUser.status === 'APPROVED' ? '가입 승인이 완료되었습니다. 회원정보를 수정할 수 있습니다.' : ''; document.getElementById('homeLink').style.display = originalUser.status === 'APPROVED' ? 'inline-block' : 'none'; document.getElementById('reapplyButton').style.display = originalUser.status === 'REJECTED' ? 'inline-block' : 'none'; document.getElementById('withdrawButton').style.display = originalUser.status === 'APPROVED' ? 'inline-block' : 'none'; document.getElementById('cancelWithdrawButton').style.display = originalUser.status === 'WITHDRAWAL_PENDING' ? 'inline-block' : 'none'; clearPasswordFields(); }
+        document.getElementById('profileForm').addEventListener('submit', async e => { e.preventDefault(); const m = document.getElementById('message'); const password = document.getElementById('password').value; const passwordConfirm = document.getElementById('passwordConfirm').value; if (password && password !== passwordConfirm) { m.textContent = '새 비밀번호가 서로 일치하지 않습니다.'; m.className = 'auth-message error'; return; } const body = { name: document.getElementById('name').value, region: document.getElementById('region').value, company: document.getElementById('company').value, position: document.getElementById('position').value, phone: document.getElementById('phone').value, email: document.getElementById('email').value, currentPassword: document.getElementById('currentPassword').value, password, passwordConfirm }; const res = await fetch('/api/me', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const d = await res.json(); if (!res.ok) { m.textContent = d.error || '수정에 실패했습니다.'; m.className = 'auth-message error'; return; } originalUser = { ...d.user }; clearPasswordFields(); m.textContent = '회원정보가 수정되었습니다.'; m.className = 'auth-message success'; document.getElementById('statusMessage').textContent = d.user.status === 'PENDING' ? '현재 가입 승인 대기 중입니다.' : '가입 승인이 완료되었습니다.'; });
+        document.getElementById('cancelButton').addEventListener('click', () => { if (!originalUser) return; setFields(originalUser); clearPasswordFields(); const m = document.getElementById('message'); m.textContent = '변경이 취소되었습니다.'; m.className = 'auth-message success'; });
+        document.getElementById('reapplyButton').addEventListener('click', async () => { const res = await fetch('/api/me/reapply', { method: 'POST' }); const d = await res.json(); const m = document.getElementById('message'); if (!res.ok) { m.textContent = d.error || '재신청에 실패했습니다.'; m.className = 'auth-message error'; return; } originalUser.status = 'PENDING'; document.getElementById('status').value = 'PENDING'; document.getElementById('statusMessage').textContent = '현재 가입 승인 대기 중입니다. 관리자 승인 전에도 이 페이지에서 정보를 수정할 수 있습니다.'; document.getElementById('reapplyButton').style.display = 'none'; m.textContent = d.message || '가입 재신청이 접수되었습니다.'; m.className = 'auth-message success'; });
+        document.getElementById('withdrawButton').addEventListener('click', async () => { if (!confirm('탈퇴 신청을 하시겠습니까? 관리자 승인 후 회원정보가 삭제됩니다.')) return; const res = await fetch('/api/me/withdraw', { method: 'POST' }); const d = await res.json(); const m = document.getElementById('message'); if (!res.ok) { m.textContent = d.error || '탈퇴 신청에 실패했습니다.'; m.className = 'auth-message error'; return; } originalUser.status = 'WITHDRAWAL_PENDING'; document.getElementById('status').value = 'WITHDRAWAL_PENDING'; document.getElementById('statusMessage').textContent = '현재 탈퇴 신청 처리 중입니다. 관리자가 탈퇴 신청을 승인하면 회원정보가 삭제됩니다.'; document.getElementById('withdrawButton').style.display = 'none'; document.getElementById('homeLink').style.display = 'none'; m.textContent = d.message || '탈퇴 신청이 접수되었습니다.'; m.className = 'auth-message success'; });
+        document.getElementById('cancelWithdrawButton').addEventListener('click', async () => { if (!confirm('탈퇴 신청을 취소하시겠습니까?')) return; const res = await fetch('/api/me/cancel-withdraw', { method: 'POST' }); const d = await res.json(); const m = document.getElementById('message'); if (!res.ok) { m.textContent = d.error || '탈퇴 취소에 실패했습니다.'; m.className = 'auth-message error'; return; } originalUser.status = 'APPROVED'; document.getElementById('status').value = '승인'; document.getElementById('statusMessage').textContent = '탈퇴 신청이 취소되었습니다. 회원정보를 수정할 수 있습니다.'; document.getElementById('cancelWithdrawButton').style.display = 'none'; document.getElementById('withdrawButton').style.display = 'inline-block'; document.getElementById('homeLink').style.display = 'inline-block'; m.textContent = d.message || '탈퇴 신청이 취소되었습니다.'; m.className = 'auth-message success'; });
+        async function logout() { clearPasswordFields(); await fetch('/api/logout', { method: 'POST' }); location.href = '/login.html?logged_out=1'; } load();
+    </script>
+</body>
+
+</html>

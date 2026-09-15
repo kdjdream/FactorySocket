@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>로그인 - 공장 생산 현황판V1.3</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-body">
+    <main class="auth-container">
+        <section class="auth-card">
+            <h1>공장 생산 현황판</h1>
+            <p class="auth-subtitle">회원 로그인</p>
+            <form id="loginForm" autocomplete="off"><label>아이디</label><input id="username" autocomplete="off" required
+                    maxlength="50"><label>비밀번호</label><input id="password" type="password" autocomplete="off" required
+                    maxlength="100"><button class="auth-button" type="submit">로그인</button></form>
+            <p id="message" class="auth-message"></p>
+            <div class="auth-links"><a href="/register.html">회원가입 신청</a></div>
+        </section>
+    </main>
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        function clearLoginFields() { loginForm.reset(); usernameInput.value = ''; passwordInput.value = ''; }
+        if (new URLSearchParams(location.search).get('logged_out') === '1') clearLoginFields();
+        window.addEventListener('pageshow', () => { if (new URLSearchParams(location.search).get('logged_out') === '1') clearLoginFields(); });
+        loginForm.addEventListener('submit', async e => { e.preventDefault(); const m = document.getElementById('message'); m.textContent = '로그인 중...'; try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: usernameInput.value, password: passwordInput.value }) }); const data = await res.json(); if (!res.ok) { m.textContent = data.error || '로그인에 실패했습니다.'; m.className = 'auth-message error'; return; } location.href = data.redirect || '/'; } catch (err) { m.textContent = '서버와 통신할 수 없습니다.'; m.className = 'auth-message error'; } });
+    </script>
+</body>
+
+</html>

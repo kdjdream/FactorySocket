@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>회원가입 - 공장 생산 현황판</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="auth-body">
+    <main class="auth-container wide">
+        <section class="auth-card">
+            <h1>공장 생산 현황판</h1>
+            <p class="auth-subtitle">회원가입 신청</p>
+            <p class="help-text">가입 후 마스터 관리자의 승인까지 기다려 주세요. 승인 전에도 로그인하여 회원정보를 수정할 수 있습니다.</p>
+            <form id="registerForm" class="form-grid">
+                <div><label>이름 *</label><input id="name" required maxlength="100"></div>
+                <div><label>아이디 *</label><input id="username" autocomplete="username" pattern="[A-Za-z0-9_]{4,50}"
+                        required maxlength="50"><small>영문, 숫자, _ / 4~50자</small></div>
+                <div><label>비밀번호 *</label><input id="password" type="password" autocomplete="new-password" minlength="8"
+                        maxlength="100" required><small>8자 이상</small></div>
+                <div><label>비밀번호 확인 *</label><input id="passwordConfirm" type="password" autocomplete="new-password"
+                        minlength="8" maxlength="100" required></div>
+                <div><label>지역 *</label><input id="region" placeholder="예: 전북 군산" required maxlength="100"></div>
+                <div><label>회사 *</label><input id="company" required maxlength="150"></div>
+                <div><label>직위 *</label><input id="position" placeholder="예: 과장, 대표" required maxlength="100"></div>
+                <div><label>전화번호 *</label><input id="phone" type="tel" inputmode="tel" placeholder="010-1234-5678"
+                        pattern="01[0-9]-?[0-9]{3,4}-?[0-9]{4}" required></div>
+                <div class="full"><label>이메일 주소 *</label><input id="email" type="email" autocomplete="email"
+                        placeholder="user@example.com" maxlength="254" required></div>
+                <div class="full"><button class="auth-button" type="submit">가입 신청</button></div>
+            </form>
+            <!-- <p id="message" class="auth-message"><span>회원번호: ${data.userId}</span></p> -->
+            <p id="message" class="auth-message"></p>
+            <div class="auth-links"><span>이미 회원이신가요?</span><a href="/login.html">로그인</a></div>
+        </section>
+    </main>
+    <script>
+        const form = document.getElementById('registerForm'), message = document.getElementById('message');
+        form.addEventListener('submit', async e => { e.preventDefault(); if (document.getElementById('password').value !== document.getElementById('passwordConfirm').value) { message.textContent = '비밀번호가 서로 다릅니다.'; message.className = 'auth-message error'; return; } message.textContent = '가입 신청 중...'; message.className = 'auth-message'; try { const body = Object.fromEntries(['name', 'username', 'password', 'region', 'company', 'position', 'phone', 'email'].map(id => [id, document.getElementById(id).value])); const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); const data = await res.json(); if (!res.ok) { message.textContent = data.error || '가입 신청에 실패했습니다.'; message.className = 'auth-message error'; return; } message.textContent = data.message; message.className = 'auth-message success'; setTimeout(() => location.href = '/login.html', 1800); } catch (err) { console.error(err); message.textContent = '서버와 통신할 수 없습니다.'; message.className = 'auth-message error'; } });
+    </script>
+</body>
+
+
+</html>
