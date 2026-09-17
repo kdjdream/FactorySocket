@@ -45,11 +45,24 @@ function handleUnauthorized(res) {
   return false;
 }
 
+// 정지(SUSPENDED)된 계정은 로그아웃이 아니라 회원정보 화면으로 이동시킵니다.
+async function handleSuspended(res) {
+  if (res.status === 403) {
+    const data = await res.clone().json().catch(() => ({}));
+    if (data.code === "SUSPENDED") {
+      location.href = data.redirect || "/profile.html?pending=1";
+      return true;
+    }
+  }
+  return false;
+}
+
 async function loadProducts() {
   try {
     const res = await fetch("/api/products");
 
     if (handleUnauthorized(res)) return;
+    if (await handleSuspended(res)) return;
 
     if (!res.ok) {
       throw new Error("제품 데이터를 가져오지 못했습니다.");
@@ -99,6 +112,7 @@ async function saveQuantity(id) {
   });
 
   if (handleUnauthorized(res)) return;
+  if (await handleSuspended(res)) return;
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -119,6 +133,7 @@ async function saveStatus(id, status) {
   });
 
   if (handleUnauthorized(res)) return;
+  if (await handleSuspended(res)) return;
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -153,6 +168,11 @@ function connectWebSocket() {
   };
 
   ws.onclose = (event) => {
+    if (event.code === 4001) {
+      location.href = "/profile.html?pending=1";
+      return;
+    }
+
     if (event.code === 1008) {
       location.href = "/login.html";
       return;

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사용자 설정</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div>
+    <h1>사용자 설정</h1>
+    <p id="userInfo">로그인 확인 중...</p>
+  </div>
+  <div class="header-actions">
+    <a class="link" href="/">현황판</a>
+    <a class="link" href="/profile.html">회원정보</a>
+    <button class="logout-button" onclick="logout()">로그아웃</button>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <form id="settingsForm" class="settings-form">
+      <fieldset>
+        <legend>알림 설정</legend>
+        <div class="field-row">
+          <label for="soundEnabled">알림음 사용</label>
+          <input type="checkbox" id="soundEnabled">
+        </div>
+        <div class="field-row">
+          <label for="soundType">알림음 종류</label>
+          <select id="soundType">
+            <option value="bell">기본 벨</option>
+            <option value="high">높은음</option>
+            <option value="beep">짧은 비프</option>
+            <option value="low">저음</option>
+            <option value="soft">부드러운 음</option>
+            <option value="chime">차임</option>
+            <option value="alert">경고음</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label for="soundVolume">알림음 크기 <output id="soundVolumeValue">50%</output></label>
+          <input type="range" id="soundVolume" min="0" max="100" step="1" value="50">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>화면 설정</legend>
+        <div class="field-row">
+          <label for="theme">화면 테마</label>
+          <select id="theme">
+            <option value="light">밝은 화면</option>
+            <option value="dark">어두운 화면</option>
+          </select>
+        </div>
+        <div class="field-row">
+          <label for="displayMode">보기 모드</label>
+          <select id="displayMode">
+            <option value="normal">일반</option>
+            <option value="compact">간결</option>
+            <option value="large">크게 보기</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>생산현황 표시 설정</legend>
+        <div class="field-row">
+          <label for="showSummary">요약 정보 표시</label>
+          <input type="checkbox" id="showSummary">
+        </div>
+        <div class="field-row">
+          <label for="showTarget">목표수량 표시</label>
+          <input type="checkbox" id="showTarget">
+        </div>
+        <div class="field-row">
+          <label for="showRate">달성률 표시</label>
+          <input type="checkbox" id="showRate">
+        </div>
+        <div class="field-row">
+          <label for="showUpdatedAt">최종 변경 날짜 표시</label>
+          <input type="checkbox" id="showUpdatedAt">
+        </div>
+        <div class="field-row">
+          <label for="showUpdatedBy">최종 변경자 표시</label>
+          <input type="checkbox" id="showUpdatedBy">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>날짜/시간 설정</legend>
+        <div class="field-row">
+          <label for="dateFormatKo">한국식 날짜/시간 표시</label>
+          <input type="checkbox" id="dateFormatKo">
+        </div>
+      </fieldset>
+
+      <div class="full profile-actions">
+        <button type="submit" class="auth-button">설정 저장</button>
+      </div>
+    </form>
+    <p id="message" class="auth-message"></p>
+  </section>
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

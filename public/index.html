@@ -16,6 +16,7 @@
   <div class="header-actions">
     <span id="userInfo" class="user-info">로그인 확인 중...</span>
     <a id="profileLink" class="link" href="/profile.html">회원정보</a>
+    <a id="settingsLink" class="link" href="/settings.html">사용자 설정</a>
     <a id="adminLink" class="link" href="/admin.html" style="display:none">회원관리</a>
     <a id="controlLink" class="link" href="/control.html" style="display:none">수량 입력 화면 →</a>
     <a id="productAdminLink" class="link" href="/product-admin.html" style="display:none">제품 관리</a>
@@ -25,11 +26,10 @@
 
 <main>
   <section class="summary">
-    <div class="card"><span>생산 품목</span><strong id="productCount">0</strong></div>
-    <div class="card"><span>총 생산수량</span><strong id="totalQuantity">0</strong></div>
-    <div class="card"><span>총 목표수량</span><strong id="totalTarget">0</strong></div>
-    <div class="card rate-card"><span>달성률</span><strong id="totalRate">0%</strong></div>
-    <div class="card sound-card"><span>알림음 설정</span><label for="soundType">알림음 종류</label><select id="soundType"><option value="bell">기본 벨</option><option value="high">높은음</option><option value="beep">짧은 비프</option><option value="low">저음</option><option value="soft">부드러운 음</option><option value="chime">차임</option><option value="alert">경고음</option></select><label for="soundVolume">소리 크기 <output id="soundVolumeValue">50%</output></label><input id="soundVolume" type="range" min="0" max="100" value="50" step="1"></div>
+    <div class="card" id="summaryCard"><span>생산 품목</span><strong id="productCount">0</strong></div>
+    <div class="card" id="summaryQuantityCard"><span>총 생산수량</span><strong id="totalQuantity">0</strong></div>
+    <div class="card" id="targetCard"><span>총 목표수량</span><strong id="totalTarget">0</strong></div>
+    <div class="card rate-card" id="rateCard"><span>달성률</span><strong id="totalRate">0%</strong></div>
   </section>
 
   <section class="panel">
@@ -43,7 +43,7 @@
         <thead>
           <tr>
             <th>제품코드</th><th>제품명</th><th>현재수량</th>
-            <th>목표수량</th><th>달성률</th><th>상태</th><th>최종변경</th>
+            <th>목표수량</th><th>달성률</th><th>상태</th><th id="changedByHeader">변경자</th><th id="updatedAtHeader">최종변경</th>
           </tr>
         </thead>
         <tbody id="productTable"></tbody>

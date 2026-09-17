@@ -4,18 +4,6 @@ CREATE DATABASE IF NOT EXISTS factory
 
 USE factory;
 
-CREATE TABLE IF NOT EXISTS products (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  product_code VARCHAR(50) NOT NULL UNIQUE,
-  product_name VARCHAR(100) NOT NULL,
-  quantity INT NOT NULL DEFAULT 0,
-  target_quantity INT NOT NULL DEFAULT 100,
-  status VARCHAR(20) NOT NULL DEFAULT '대기',
-  active TINYINT(1) NOT NULL DEFAULT 1,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ON UPDATE CURRENT_TIMESTAMP
-);
-
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(50) NOT NULL UNIQUE,
@@ -40,6 +28,38 @@ CREATE TABLE IF NOT EXISTS users (
   KEY idx_users_status (status),
   KEY idx_users_permission_level (permission_level),
   KEY idx_users_created_at (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  product_code VARCHAR(50) NOT NULL UNIQUE,
+  product_name VARCHAR(100) NOT NULL,
+  quantity INT NOT NULL DEFAULT 0,
+  target_quantity INT NOT NULL DEFAULT 100,
+  status VARCHAR(20) NOT NULL DEFAULT '대기',
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  updated_by INT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_products_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_settings (
+  user_id INT NOT NULL PRIMARY KEY,
+  sound_type VARCHAR(20) NOT NULL DEFAULT 'bell',
+  sound_volume TINYINT UNSIGNED NOT NULL DEFAULT 50,
+  sound_enabled TINYINT(1) NOT NULL DEFAULT 1,
+  theme VARCHAR(10) NOT NULL DEFAULT 'light',
+  display_mode VARCHAR(10) NOT NULL DEFAULT 'normal',
+  show_summary TINYINT(1) NOT NULL DEFAULT 1,
+  show_target TINYINT(1) NOT NULL DEFAULT 1,
+  show_rate TINYINT(1) NOT NULL DEFAULT 1,
+  show_updated_at TINYINT(1) NOT NULL DEFAULT 1,
+  show_updated_by TINYINT(1) NOT NULL DEFAULT 1,
+  date_format VARCHAR(10) NOT NULL DEFAULT 'ko-KR',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_user_settings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 INSERT INTO products

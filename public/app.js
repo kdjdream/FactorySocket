@@ -1,6 +1,12 @@
 let products = [];
-let soundVolume = Number(localStorage.getItem("factorySoundVolume") || 50) / 100;
-let soundType = localStorage.getItem("factorySoundType") || "bell";
+const DEFAULT_SETTINGS = {
+  sound_type: "bell", sound_volume: 50, sound_enabled: true, theme: "light",
+  display_mode: "normal", show_summary: true, show_target: true, show_rate: true,
+  show_updated_at: true, show_updated_by: true, date_format: "ko-KR"
+};
+let userSettings = { ...DEFAULT_SETTINGS };
+let soundVolume = userSettings.sound_volume / 100;
+let soundType = userSettings.sound_type;
 let audioContext;
 
 function enableAudio() {
@@ -9,7 +15,7 @@ function enableAudio() {
 }
 
 function playQuantityNotification() {
-  if (soundVolume <= 0) return;
+  if (!userSettings.sound_enabled || soundVolume <= 0) return;
   try {
     enableAudio();
     const tones = {
@@ -54,12 +60,23 @@ function redirectToLogin() {
   }
 }
 
+// 정지(SUSPENDED)된 계정은 로그아웃이 아니라 회원정보 화면으로 보냅니다.
+async function handleAuthResponse(res) {
+  if (res.status === 401) { redirectToLogin(); return true; }
+  if (res.status === 403) {
+    try {
+      const data = await res.clone().json();
+      if (data.code === "SUSPENDED") { location.href = data.redirect || "/profile.html?pending=1"; return true; }
+    } catch { /* JSON이 아닌 응답은 무시합니다. */ }
+  }
+  return false;
+}
+
 async function loadProducts() {
   try {
     const res = await fetch("/api/products");
 
-    if (res.status === 401) {
-      redirectToLogin();
+    if (await handleAuthResponse(res)) {
       return;
     }
 
@@ -100,15 +117,17 @@ function render() {
             ${escapeHtml(p.status)}
           </span>
         </td>
-        <td>${formatDate(p.updated_at)}</td>
+        <td class="col-changed-by">${escapeHtml(p.updated_by_name || "-")}</td>
+        <td class="col-updated-at">${formatDate(p.updated_at)}</td>
       </tr>
     `;
   }).join("");
 
   updateSummary();
+  applyProductColumnVisibility();
 
   document.getElementById("lastUpdate").textContent =
-    "Updated: " + new Date().toLocaleString("ko-KR");
+    "Updated: " + formatDate(new Date());
 }
 
 function updateSummary() {
@@ -133,6 +152,29 @@ function updateSummary() {
 
   document.getElementById("totalRate").textContent =
     rate.toFixed(1) + "%";
+
+  applySummaryVisibility();
+}
+
+function applySummaryVisibility() {
+  const summaryCard = document.getElementById("summaryCard");
+  const summaryQuantityCard = document.getElementById("summaryQuantityCard");
+  const targetCard = document.getElementById("targetCard");
+  const rateCard = document.getElementById("rateCard");
+  if (summaryCard) summaryCard.style.display = userSettings.show_summary ? "" : "none";
+  if (summaryQuantityCard) summaryQuantityCard.style.display = userSettings.show_summary ? "" : "none";
+  if (targetCard) targetCard.style.display = userSettings.show_target ? "" : "none";
+  if (rateCard) rateCard.style.display = userSettings.show_rate ? "" : "none";
+}
+
+// 테이블의 최종 변경자/날짜 열은 사용자별 표시 설정을 따릅니다.
+function applyProductColumnVisibility() {
+  const changedByHeader = document.getElementById("changedByHeader");
+  const updatedAtHeader = document.getElementById("updatedAtHeader");
+  if (changedByHeader) changedByHeader.style.display = userSettings.show_updated_by ? "" : "none";
+  if (updatedAtHeader) updatedAtHeader.style.display = userSettings.show_updated_at ? "" : "none";
+  document.querySelectorAll(".col-changed-by").forEach(cell => { cell.style.display = userSettings.show_updated_by ? "" : "none"; });
+  document.querySelectorAll(".col-updated-at").forEach(cell => { cell.style.display = userSettings.show_updated_at ? "" : "none"; });
 }
 
 function statusClass(status) {
@@ -155,9 +197,36 @@ function formatDate(value) {
 
   if (Number.isNaN(date.getTime())) return "-";
 
+  if (userSettings.date_format === "iso") return date.toISOString().slice(0, 19).replace("T", " ");
+
   return date.toLocaleString("ko-KR", {
     timeZone: "Asia/Seoul"
   });
+}
+
+// DB에 저장된 사용자 설정을 화면(테마/표시모드/알림음)에 적용합니다.
+function applyUserSettings(settings) {
+  userSettings = { ...DEFAULT_SETTINGS, ...settings };
+  soundType = userSettings.sound_type;
+  soundVolume = Number(userSettings.sound_volume) / 100;
+
+  document.documentElement.setAttribute("data-theme", userSettings.theme);
+  document.documentElement.setAttribute("data-display-mode", userSettings.display_mode);
+
+  applySummaryVisibility();
+  applyProductColumnVisibility();
+}
+
+async function loadUserSettings() {
+  try {
+    const res = await fetch("/api/me/settings");
+    if (await handleAuthResponse(res)) return;
+    if (!res.ok) throw new Error("설정을 가져오지 못했습니다.");
+    applyUserSettings(await res.json());
+  } catch (err) {
+    console.error(err);
+    applyUserSettings(DEFAULT_SETTINGS);
+  }
 }
 
 function connectWebSocket() {
@@ -176,7 +245,10 @@ function connectWebSocket() {
       "● 실시간 연결되었습니다.";
   };
 
-  ws.onclose = (event) => {
+  ws.onclose = (event) => {    if (event.code === 4001) {
+      location.href = "/profile.html?pending=1";
+      return;
+    }
     if (event.code === 1008) {
       redirectToLogin();
       return;
@@ -215,24 +287,7 @@ function connectWebSocket() {
   };
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const soundTypeInput = document.getElementById("soundType");
-  const volumeInput = document.getElementById("soundVolume");
-  const volumeValue = document.getElementById("soundVolumeValue");
-  soundTypeInput.value = soundType;
-  volumeInput.value = String(Math.round(soundVolume * 100));
-  volumeValue.value = `${volumeInput.value}%`;
-  document.addEventListener("pointerdown", enableAudio, { once: true });
-  soundTypeInput.addEventListener("change", () => {
-    soundType = soundTypeInput.value;
-    localStorage.setItem("factorySoundType", soundType);
-  });
-  volumeInput.addEventListener("input", () => {
-    soundVolume = Number(volumeInput.value) / 100;
-    localStorage.setItem("factorySoundVolume", volumeInput.value);
-    volumeValue.value = `${volumeInput.value}%`;
-  });
-});
+document.addEventListener("pointerdown", enableAudio, { once: true });
 
 async function loadUser() {
   const res = await fetch("/api/me");
@@ -269,5 +324,6 @@ function escapeHtml(value) {
 }
 
 loadUser();
+loadUserSettings();
 loadProducts();
 connectWebSocket();
