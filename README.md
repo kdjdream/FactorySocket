@@ -182,7 +182,7 @@ MASTER_EMAIL=실제이메일@example.com
 
 ## 데이터베이스
 
-새 데이터베이스를 사용하는 경우 프로젝트의 `schema.sql`을 실행합니다. `schema.sql`은 신규 배포를 전제로 작성되어 있어 모든 테이블과 컬럼, 외래키를 `users` → `products` → `user_settings` 순서로 한 번에 생성합니다(이후 컬럼을 추가로 `ALTER`하는 방식이 아닙니다).
+`factory` 데이터베이스가 없는 신규 환경에서 프로젝트의 `schema.sql`을 실행합니다. DB 생성 권한이 있는 계정으로 실행해야 하며, 데이터베이스 생성과 선택(`CREATE DATABASE factory`, `USE factory`)부터 회원·제품·개인 설정 및 Wemos 테이블과 초기 데이터 생성까지 한 번에 처리합니다. `Digital_input`, `Degital_output`을 포함한 모든 컬럼과 외래키는 처음부터 생성하며, 이후 `ALTER`로 추가하는 방식이 아닙니다. 이미 `factory`가 존재하면 오류가 발생하며, 기존 DB를 삭제하거나 덮어쓰지 않습니다.
 
 이미 운영 중인 DB라면 서버가 시작할 때 `users`, `products`, `user_settings`에 필요한 컬럼을 확인하고 부족한 부분을 자동으로 `ALTER TABLE`로 추가합니다(`server.js`의 `ensureSchema()`). 현재 주요 테이블은 다음과 같습니다.
 
@@ -326,7 +326,7 @@ ADD COLUMN permission_level TINYINT UNSIGNED NOT NULL DEFAULT 1;
 - 기존 DB에 중복 이메일이 있으면 이메일 UNIQUE 인덱스 생성이 실패할 수 있습니다. 중복을 정리한 뒤 인덱스를 적용하세요.
 - 회원 탈퇴 승인과 제품 삭제는 데이터베이스에서 복구할 수 없으므로 처리 전 대상 정보를 확인하세요.
 - 관리자가 회원을 삭제하면 `user_settings`의 해당 회원 설정도 `ON DELETE CASCADE`로 함께 삭제되고, 해당 회원이 마지막으로 변경한 제품의 `updated_by`는 `NULL`로 바뀝니다.
-- `schema.sql`은 신규 배포(빈 데이터베이스) 전용입니다. 이미 데이터가 있는 DB에서는 실행하지 말고, 서버를 재시작해 `ensureSchema()`가 자동으로 마이그레이션하도록 하세요.
+- `schema.sql`은 `factory` 데이터베이스가 없는 신규 배포 전용입니다. 이미 DB가 존재하면 실행하지 말고, 서버를 재시작해 `ensureSchema()`가 자동으로 마이그레이션하도록 하세요.
 
 
 ## Wemos D1 R1 통합
@@ -384,20 +384,62 @@ py -m platformio device monitor --port COM6 --baud 115200
 | 7 | IS7 | OS7 | IStr7 | OStr7 |
 | 8 | IS8 | OS8 | IStr8 | OStr8 |
 
-Wemos의 `state` 메시지는 `pin=OS1~OS8`, `inputPin=IS1~IS8`, `IStr`, `OStr`를 포함합니다.
-서버는 `wemos_contact_sets`에 각 채널의 상태와 문자열을 저장하고 브라우저에 WebSocket으로 전달합니다.
+Wemos의 `state` 메시지는 `OutputSignal=OS1~OS8`, `OutputState`, `InputSignal=IS1~IS8`, `inputState`, `IStr`, `OStr`, `source`, `ip`를 포함합니다. 신호 이름은 채널 식별자이고 `OutputState`가 실제 출력의 `ON`/`OFF` 값입니다.
+서버는 `wemos_contact_sets`에 채널 이름(`Digital_input`, `Degital_output`), 입력 상태(`input_state`)와 출력 상태(`current_state`), 문자열(`input_string`, `output_string`)을 각각 저장하고 브라우저에 WebSocket으로 전달합니다. 마지막 장치 IP는 `wemos_devices.last_ip`에 저장합니다.
+
+### 입력 및 웹 제어 흐름
+
+- **입력 변화**: IS1~IS8의 값이 50ms 동안 안정되면 대응 OS1~OS8을 같은 값으로 변경하고 `OutputSignal`, `OutputState`를 서버에 보고합니다. 이미 출력이 같은 값이어도 바뀐 입력 상태를 함께 보고합니다.
+- **웹 버튼**: 브라우저가 장치 ID, `OutputSignal`, `severSignal="ON"/"OFF"`를 서버에 보냅니다. 서버는 인증·권한 확인과 명령 저장 후 디바이스로 전송합니다.
+- **디바이스 명령 처리**: 채널별 `severSignal`에 요청값을 보관하고 실제 OS에 적용한 뒤, 실제 `OutputState`를 ACK 및 상태 보고로 전송합니다. 같은 상태의 요청도 상태 보고를 예약합니다.
+- **웹 화면 반영**: 서버가 디바이스의 `OutputState`를 DB에 저장하고 상태 이벤트로 전달하면 현재 OS 표시와 ON/OFF 버튼 색상·선택 상태가 변경됩니다. 요청 저장·전달 알림만으로는 실제 상태를 변경하지 않습니다.
+- **우선순위**: 마지막으로 처리된 입력 변화 또는 웹 명령이 출력에 적용됩니다. 웹 제어는 IS 입력값을 바꾸지 않으며, 이후 입력이 다시 변하면 입력값이 출력을 갱신합니다.
+
+DB 및 조회 API의 입력·출력 채널 필드는 `Digital_input`, `Degital_output`을 사용합니다. 기존 DB의 `input_pin`, `output_pin`은 서버 재시작 시 데이터와 인덱스를 유지하면서 자동으로 이름을 변경합니다. WebSocket 송신은 Wemos·서버·브라우저 모두 `InputSignal`, `OutputSignal`을 사용합니다. 서버는 이전 펌웨어 및 브라우저의 `inputPin`, `pin`을 수신 호환용으로만 허용하며, 새 메시지에는 이전 필드를 넣지 않습니다. 이력·명령 테이블의 `pin_name`은 기존 데이터 저장 컬럼명으로 유지합니다.
+
+### 장치 → 서버 메시지
+
+| type | 주요 필드 | 서버 처리 |
+| --- | --- | --- |
+| `hello` | `deviceId`, `OutputSignal`, `inputs`, `outputs` | 인증된 장치의 IS1~IS8/OS1~OS8 채널 등록, 연결 상태 알림, 대기 명령 전송 |
+| `state` | `deviceId`, `OutputSignal`, `OutputState`, `InputSignal`, `inputState`, `source`, `IStr`, `OStr`, `ip` | 입력·출력 상태와 문자열 저장, 실제 출력 변경 이력 기록, 실시간 전달 |
+| `channelString` | `deviceId`, `OutputSignal`, `InputSignal`, `IStr` | 입력 문자열만 갱신, 기존 출력 문자열과 상태 유지 |
+| `ack` | `deviceId`, `commandId`, `OutputSignal`, `OutputState`, `success` | 명령의 장치·채널·상태 확인 후 성공/실패 기록. ACK에 없는 입력 정보는 유지 |
+
+`sendString`은 `IStr`의 호환 필드, `receiveString`은 `OStr`의 호환 필드입니다. 장치 메시지는 인증 완료 후 수신 순서대로 처리합니다. `CLIENT` 출처의 상태 보고도 입력 상태와 문자열을 반영하며, 출력 상태가 그대로이면 기존 변경자와 이력을 유지합니다.
+이전 장치의 `state`도 수신 호환용으로 허용하지만 `OutputState`가 있으면 우선 사용합니다. 서버의 브라우저 상태 이벤트에는 `OutputState`와 기존 화면 호환용 `state`를 함께 포함합니다.
+
+### 서버 → 장치 명령
 
 브라우저에서 출력 제어를 하면 서버는 다음 형식으로 Wemos에 명령을 전송합니다.
+서버 → 장치 `command` 메시지의 출력 문자열은 `OStr` 하나로만 전송하며, 중복 필드 `receiveString`, `outputString`은 포함하지 않습니다. 기존 펌웨어의 수신 호환 처리와 브라우저 알림·명령 이력의 데이터 형식은 유지합니다.
 
 ```json
 {
   "type": "command",
   "deviceId": "WEMOS-D1-001",
   "commandId": "UUID",
-  "pin": "OS1",
-  "state": "ON",
+  "OutputSignal": "OS1",
+  "InputSignal": "IS1",
+  "severSignal": "ON",
   "OStr": "MOTOR_ON"
 }
 ```
 
 기존 V0의 `D8/D9/D10/D11` 명령도 각각 `OS1/OS2/OS3/OS4`로 호환 변환됩니다.
+
+접점 제어 화면에서 채널별 `OStr`를 입력하고 ON/OFF를 누르면 상태와 문자열이 같은 명령으로 전송됩니다. 1등급 조회 화면에는 제어 버튼과 문자열 입력 필드가 없습니다. 기존 회원·제품·설정 API와 제어 권한은 유지합니다.
+
+현재 펌웨어는 빈 `OStr`를 받으면 기존 문자열을 유지하므로, 서버도 문자열이 비어 있는 제어 요청에서는 마지막 저장된 문자열을 사용합니다. 문자열만 바꾸려면 현재와 같은 ON/OFF 상태로 명령을 보낼 수 있으며, 이 경우에도 ACK와 상태 보고로 동기화합니다.
+
+현재 펌웨어는 실제 GPIO 대신 논리 IS/OS 변수를 사용합니다. 실제 DI/DO 배선의 읽기·쓰기 코드는 별도로 연결해야 합니다. 펌웨어 업데이트 후 입력 변화가 출력을 자동 변경하므로 실제 설비에서 검증할 때에는 부하를 분리하고 안전한 상태에서 확인하세요.
+
+기존 DB는 서버 재시작 시 `input_state`, `last_ip` 등 누락된 컬럼을 자동 추가합니다. `schema.sql`은 신규 DB에만 사용하세요. 펌웨어의 `DEVICE_ID`를 서버 환경변수와 동일하게 설정하거나 장치 관리에서 해당 ID를 등록하고 발급된 토큰을 펌웨어에 설정해야 합니다.
+
+### 통신 회귀 테스트
+
+```bash
+npm test
+```
+
+테스트는 DB와 장치를 모의 처리하여 8채널 등록, 인증 중 메시지 대기, 수신 순서, 입력·출력 분리, 문자열 보존, ACK 검증 및 화면 전송을 확인합니다. 실제 MySQL/MariaDB 연결과 보드 통신은 별도로 확인해야 합니다.

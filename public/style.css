@@ -699,6 +699,10 @@ html[data-display-mode="large"] button { font-size: 1.05em; }
 .signal-pin { color: var(--channel-color); font-size: 12px; font-weight: 800; white-space: nowrap; }
 .signal-arrow { color: var(--channel-color); font-size: 15px; }
 .channel-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.signal-strings { display: grid; gap: 6px; min-width: 0; margin-bottom: 12px; font-size: 12px; }
+.signal-strings code { overflow-wrap: anywhere; white-space: pre-wrap; }
+.wemos-output-string { display: grid; gap: 5px; min-width: 0; margin-bottom: 12px; color: var(--wemos-muted); font-size: 12px; }
+.wemos-output-string input { box-sizing: border-box; width: 100%; min-width: 0; padding: 8px; border: 1px solid var(--wemos-line); border-radius: 4px; background: var(--wemos-ground); color: var(--wemos-ink); }
 .wemos-page .output-button {
   display: flex;
   min-width: 0;

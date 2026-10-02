@@ -13,8 +13,8 @@
 
   function applyLiveState(message) {
     const deviceId = String(message.deviceId || "");
-    const pin = String(message.pin || "").toUpperCase();
-    const state = String(message.state || "").toUpperCase();
+    const pin = String(message.OutputSignal ?? message.pin ?? "").toUpperCase();
+    const state = String(message.OutputState ?? message.state ?? "").toUpperCase();
 
     if (!deviceId || !/^OS[1-8]$/.test(pin)) return;
     if (!["ON", "OFF"].includes(state)) return;
@@ -33,6 +33,15 @@
         indicator.dataset.state = state;
       });
 
+    if (["ON", "OFF"].includes(message.inputState)) {
+      document.querySelectorAll(`${deviceSelector} [data-active-input-pin="${CSS.escape(`IS${pin.slice(2)}`)}"]`)
+        .forEach(indicator => {
+          indicator.textContent = message.inputState;
+          indicator.dataset.state = message.inputState;
+        });
+    }
+    applyLiveString(message);
+
     document
       .querySelectorAll(
         `${deviceSelector} [data-active-command="true"][data-pin="${CSS.escape(pin)}"]`
@@ -46,13 +55,31 @@
 
   function applyLiveString(message) {
     const deviceId = String(message.deviceId || "");
-    const pin = String(message.pin || "").toUpperCase();
+    const pin = String(message.OutputSignal ?? message.pin ?? "").toUpperCase();
     if (!deviceId || !/^OS[1-8]$/.test(pin)) return;
     const deviceSelector = `[data-device-id="${CSS.escape(deviceId)}"]`;
-    document.querySelectorAll(`${deviceSelector} [data-active-input-string="${CSS.escape(message.inputPin || `IS${pin.slice(2)}`)}"]`)
-      .forEach(el => el.textContent = String(message.IStr || ""));
-    document.querySelectorAll(`${deviceSelector} [data-active-output-string="${CSS.escape(pin)}"]`)
-      .forEach(el => el.textContent = String(message.OStr || ""));
+    if (message.IStr !== undefined) {
+      document.querySelectorAll(`${deviceSelector} [data-active-input-string="${CSS.escape(`IS${pin.slice(2)}`)}"]`)
+        .forEach(element => element.textContent = String(message.IStr ?? ""));
+    }
+    if (message.OStr !== undefined) {
+      document.querySelectorAll(`${deviceSelector} [data-active-output-string="${CSS.escape(pin)}"]`)
+        .forEach(element => element.textContent = String(message.OStr ?? ""));
+    }
+  }
+
+  function rememberLiveMessage(message) {
+    const deviceId = String(message.deviceId || "");
+    const pin = String(message.OutputSignal ?? message.pin ?? "").toUpperCase();
+    if (!deviceId || !/^OS[1-8]$/.test(pin)) return;
+    const key = `${deviceId}:${pin}`;
+    const normalized = { ...liveStates.get(key), ...message, deviceId, OutputSignal: pin };
+    if (message.OutputState !== undefined || message.state !== undefined) {
+      normalized.OutputState = message.OutputState ?? message.state;
+    }
+    liveStates.set(key, normalized);
+    applyLiveString(normalized);
+    applyLiveState(normalized);
   }
 
   // wemos.js에서 WebSocket 이벤트를 직접 호출할 수 있도록 공개합니다.
@@ -126,9 +153,12 @@
           <div class="active-wemos-channels">
             ${(device.sets || []).map((set, index) => {
               const state = set.current_state === "ON" ? "ON" : "OFF";
+              const inputState = set.input_state === "ON" ? "ON" : "OFF";
+              const inputStringName = String(set.Digital_input).replace(/^IS([1-8])$/, "IStr$1");
+              const outputStringName = String(set.Degital_output).replace(/^OS([1-8])$/, "OStr$1");
 
               return `
-                <article class="channel-card channel-${escapeHtml(String(set.output_pin).toLowerCase())}">
+                <article class="channel-card channel-${escapeHtml(String(set.Degital_output).toLowerCase())}">
                   <div class="channel-card-head">
                     <div>
                       <span class="channel-number">
@@ -141,7 +171,7 @@
                       <span>현재 OS 상태</span>
                       <b
                         class="pin-state"
-                        data-active-pin="${escapeHtml(set.output_pin)}"
+                        data-active-pin="${escapeHtml(set.Degital_output)}"
                         data-state="${state}"
                       >
                         ${state}
@@ -151,19 +181,25 @@
 
                   <div class="signal-path">
                     <span class="signal-pin">${escapeHtml(set.input_signal)}</span>
-                    <span>입력 신호</span>
+                    <b class="pin-state" data-active-input-pin="${escapeHtml(set.Digital_input)}" data-state="${inputState}">${inputState}</b>
                     <span class="signal-arrow" aria-hidden="true">→</span>
                     <strong>${escapeHtml(set.output_signal)} 출력 신호</strong>
                   </div>
                   <div class="signal-strings">
-                    <span>IStr: <code data-active-input-string="${escapeHtml(set.input_pin)}">${escapeHtml(set.input_string || "")}</code></span>
-                    <span>OStr: <code data-active-output-string="${escapeHtml(set.output_pin)}">${escapeHtml(set.output_string || "")}</code></span>
+                    <span>${escapeHtml(inputStringName)}: <code data-active-input-string="${escapeHtml(set.Digital_input)}">${escapeHtml(set.input_string || "")}</code></span>
+                    <span>${escapeHtml(outputStringName)}: <code data-active-output-string="${escapeHtml(set.Degital_output)}">${escapeHtml(set.output_string || "")}</code></span>
                   </div>
 
                   ${
                     viewOnly
                       ? ""
                       : `
+                        <label class="wemos-output-string">
+                          <span>${escapeHtml(outputStringName)}</span>
+                          <input type="text" data-command-output-string="${escapeHtml(set.Degital_output)}"
+                            value="${escapeHtml(set.output_string || "")}" maxlength="10000" autocomplete="off"
+                            aria-label="${escapeHtml(outputStringName)}">
+                        </label>
                         <div
                           class="channel-actions"
                           role="group"
@@ -174,7 +210,7 @@
                             type="button"
                             data-active-command="true"
                             data-device-id="${escapeHtml(device.device_id)}"
-                            data-pin="${escapeHtml(set.output_pin)}"
+                            data-pin="${escapeHtml(set.Degital_output)}"
                             data-state="ON"
                             aria-pressed="${state === "ON"}"
                           >
@@ -187,7 +223,7 @@
                             type="button"
                             data-active-command="true"
                             data-device-id="${escapeHtml(device.device_id)}"
-                            data-pin="${escapeHtml(set.output_pin)}"
+                            data-pin="${escapeHtml(set.Degital_output)}"
                             data-state="OFF"
                             aria-pressed="${state === "OFF"}"
                           >
@@ -207,6 +243,7 @@
 
     // API 조회와 WebSocket 연결 사이의 타이밍 차이를 보정합니다.
     for (const message of liveStates.values()) {
+      applyLiveString(message);
       applyLiveState(message);
     }
 
@@ -236,8 +273,9 @@
       window.sendWemosCommand({
         type: "lamp",
         deviceId: button.dataset.deviceId,
-        pin: button.dataset.pin,
-        state: button.dataset.state
+        OutputSignal: button.dataset.pin,
+        severSignal: button.dataset.state,
+        OStr: button.closest(".channel-card")?.querySelector("[data-command-output-string]")?.value ?? ""
       });
     }
   });
@@ -255,7 +293,19 @@
     }
 
     if (message.type === "channelString" || message.type === "state" || message.type === "stateChanged") {
-      if (message.IStr !== undefined || message.OStr !== undefined) applyLiveString(message);
+      rememberLiveMessage(message);
+      return;
+    }
+
+    if (["wemosSnapshot", "initialState"].includes(message.type) && message.state) {
+      for (const channel of message.state.channels || []) {
+        rememberLiveMessage({
+          deviceId: message.state.device_id, OutputSignal: channel.Degital_output,
+          InputSignal: channel.Digital_input,
+          OutputState: channel.current_state, inputState: channel.input_state,
+          IStr: channel.input_string, OStr: channel.output_string
+        });
+      }
     }
 
     if (
@@ -269,35 +319,6 @@
       });
     }
 
-    // 매우 중요: 웹에서 보낸 명령(commandQueued/commandAck)은
-    // "요청" 또는 "명령 처리 결과"일 뿐, 이 화면의 실제 출력 상태가 아닙니다.
-    // 현재 출력값과 ON/OFF 버튼은 Wemos가 실제 출력 상태를 보고한
-    // state/stateChanged 이벤트에서만 변경합니다.
-    if (!["state", "stateChanged"].includes(message.type)) {
-      return;
-    }
-
-    if (
-      !message.deviceId ||
-      !message.pin ||
-      !["ON", "OFF"].includes(message.state)
-    ) {
-      return;
-    }
-
-    const normalized = {
-      ...message,
-      deviceId: String(message.deviceId),
-      pin: String(message.pin).toUpperCase(),
-      state: String(message.state).toUpperCase()
-    };
-
-    liveStates.set(
-      `${normalized.deviceId}:${normalized.pin}`,
-      normalized
-    );
-
-    applyLiveState(normalized);
   });
 
   load().then(() => {
@@ -305,16 +326,7 @@
       ? window.__pendingWemosLiveStates.splice(0)
       : [];
 
-    pending.forEach(message => {
-      const normalized = {
-        ...message,
-        deviceId: String(message.deviceId || ""),
-        pin: String(message.pin || "").toUpperCase(),
-        state: String(message.state || "").toUpperCase()
-      };
-      liveStates.set(`${normalized.deviceId}:${normalized.pin}`, normalized);
-      applyLiveState(normalized);
-    });
+    pending.forEach(rememberLiveMessage);
   }).catch(error => {
     console.error("[Wemos UI] 장치 목록 조회 오류:", error);
   });

@@ -4,7 +4,8 @@
   "description": "Factory quantity real-time monitor with registration approval, profile editing and master administration",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

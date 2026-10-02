@@ -53,7 +53,7 @@ const wemosDeviceSockets = new Map();
 let wemosDeviceSocket = null;
 
 app.use(express.json({ limit: "100kb" }));
-app.use(["/wemos.html", "/wemos-view.html", "/wemos-admin.html", "/wemos.js", "/wemos-view.js", "/wemos-admin.js"], (req, res, next) => {
+app.use(["/wemos.html", "/wemos-view.html", "/wemos-admin.html", "/wemos.js", "/wemos-view.js", "/wemos-admin.js", "/wemos-active-devices.js"], (req, res, next) => {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
   res.setHeader("Pragma", "no-cache");
   next();
@@ -631,6 +631,15 @@ function broadcastWemosBrowsers(message) {
     if (ws.wemosSubscriber === true && ws.readyState === WebSocket.OPEN) ws.send(data);
   }
 }
+async function migrateWemosContactSignalColumns(columnNames) {
+  for (const [oldName, newName] of [["input_pin", "Digital_input"], ["output_pin", "Degital_output"]]) {
+    if (!columnNames.has(newName.toLowerCase()) && columnNames.has(oldName)) {
+      await query(`ALTER TABLE wemos_contact_sets CHANGE COLUMN ${oldName} ${newName} VARCHAR(20) NOT NULL`);
+      columnNames.delete(oldName);
+      columnNames.add(newName.toLowerCase());
+    }
+  }
+}
 async function ensureWemosSchema() {
   await query(`CREATE TABLE IF NOT EXISTS wemos_devices (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -645,6 +654,7 @@ async function ensureWemosSchema() {
     d7_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
     d10_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
     d11_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
+    last_ip VARCHAR(45) NULL,
     last_seen_at DATETIME(3) NULL,
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
@@ -659,6 +669,7 @@ async function ensureWemosSchema() {
     ["token_hash", "CHAR(64) NULL"],
     ["active", "TINYINT(1) NOT NULL DEFAULT 1"],
     ["sort_order", "INT NOT NULL DEFAULT 0"],
+    ["last_ip", "VARCHAR(45) NULL"],
     ["d8_state", "ENUM('ON','OFF') NOT NULL DEFAULT 'OFF'"],
     ["d7_state", "ENUM('ON','OFF') NOT NULL DEFAULT 'OFF'"],
     ["d10_state", "ENUM('ON','OFF') NOT NULL DEFAULT 'OFF'"],
@@ -679,10 +690,11 @@ async function ensureWemosSchema() {
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     device_id VARCHAR(100) NOT NULL,
     set_name VARCHAR(100) NOT NULL,
-    input_pin VARCHAR(20) NOT NULL,
-    output_pin VARCHAR(20) NOT NULL,
+    Digital_input VARCHAR(20) NOT NULL,
+    Degital_output VARCHAR(20) NOT NULL,
     active TINYINT(1) NOT NULL DEFAULT 1,
     current_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
+    input_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
     last_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
     input_string TEXT NULL,
     output_string TEXT NULL,
@@ -690,14 +702,16 @@ async function ensureWemosSchema() {
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (id),
-    UNIQUE KEY uq_contact_input(device_id,input_pin),
-    UNIQUE KEY uq_contact_output(device_id,output_pin),
+    UNIQUE KEY uq_contact_input(device_id,Digital_input),
+    UNIQUE KEY uq_contact_output(device_id,Degital_output),
     CONSTRAINT fk_contact_device FOREIGN KEY (device_id) REFERENCES wemos_devices(device_id) ON DELETE CASCADE
   ) ENGINE=InnoDB`);
 
   const contactColumns = await query(`SELECT COLUMN_NAME AS column_name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='wemos_contact_sets'`);
   const contactColumnNames = new Set(contactColumns.map(column => String(column.column_name).toLowerCase()));
+  await migrateWemosContactSignalColumns(contactColumnNames);
   for (const [columnName, definition] of [
+    ["input_state", "ENUM('ON','OFF') NOT NULL DEFAULT 'OFF'"],
     ["input_string", "TEXT NULL"],
     ["output_string", "TEXT NULL"]
   ]) {
@@ -757,19 +771,19 @@ async function ensureWemosSchema() {
   const logicalSets = WEMOS_CHANNELS;
   for (let index = 0; index < logicalSets.length; index++) {
     const channel = logicalSets[index];
-    const existing = await query(`SELECT id FROM wemos_contact_sets WHERE device_id=? AND input_pin=? LIMIT 1`, [WEMOS_DEVICE_ID, channel.inputPin]);
+    const existing = await query(`SELECT id FROM wemos_contact_sets WHERE device_id=? AND Digital_input=? LIMIT 1`, [WEMOS_DEVICE_ID, channel.inputPin]);
     if (existing.length) continue;
 
     if (legacySets[index]) {
       try {
-        await query(`UPDATE wemos_contact_sets SET set_name=?,input_pin=?,output_pin=?,sort_order=? WHERE id=?`,
+        await query(`UPDATE wemos_contact_sets SET set_name=?,Digital_input=?,Degital_output=?,sort_order=? WHERE id=?`,
           [`채널 ${String(index + 1).padStart(2,"0")}`,channel.inputPin,channel.outputPin,index,legacySets[index].id]);
         continue;
       } catch (err) {
         console.warn("[Wemos] 기존 접점 세트 변환 건너뜀:", err.message);
       }
     }
-    await query(`INSERT IGNORE INTO wemos_contact_sets(device_id,set_name,input_pin,output_pin,sort_order)
+    await query(`INSERT IGNORE INTO wemos_contact_sets(device_id,set_name,Digital_input,Degital_output,sort_order)
       VALUES(?,?,?,?,?)`,
       [WEMOS_DEVICE_ID,`채널 ${String(index + 1).padStart(2,"0")}`,channel.inputPin,channel.outputPin,index]);
   }
@@ -778,7 +792,7 @@ async function ensureWemosSchema() {
   const devices = await query(`SELECT device_id FROM wemos_devices`);
   for (const device of devices) {
     for (const channel of WEMOS_CHANNELS) {
-      await query(`INSERT IGNORE INTO wemos_contact_sets(device_id,set_name,input_pin,output_pin,sort_order)
+      await query(`INSERT IGNORE INTO wemos_contact_sets(device_id,set_name,Digital_input,Degital_output,sort_order)
         VALUES(?,?,?,?,?)`,
         [device.device_id,`채널 ${String(channel.index).padStart(2,"0")}`,channel.inputPin,channel.outputPin,channel.index - 1]);
     }
@@ -790,13 +804,13 @@ async function ensureWemosSchema() {
 
 async function getWemosState(deviceId = null) {
   const devices = deviceId
-    ? await query(`SELECT device_id,device_name,active,last_source,last_seen_at,updated_at FROM wemos_devices WHERE device_id=?`, [deviceId])
-    : await query(`SELECT device_id,device_name,active,last_source,last_seen_at,updated_at FROM wemos_devices ORDER BY sort_order,id`);
+    ? await query(`SELECT device_id,device_name,active,last_source,last_ip,last_seen_at,updated_at FROM wemos_devices WHERE device_id=?`, [deviceId])
+    : await query(`SELECT device_id,device_name,active,last_source,last_ip,last_seen_at,updated_at FROM wemos_devices ORDER BY sort_order,id`);
   if (!devices.length) return null;
 
   const device = devices[0];
   const sets = await query(
-    `SELECT id,set_name,input_pin,output_pin,active,current_state,last_source,input_string,output_string,sort_order
+    `SELECT id,set_name,Digital_input,Degital_output,active,current_state,input_state,last_source,input_string,output_string,sort_order
      FROM wemos_contact_sets WHERE device_id=? ORDER BY sort_order,id`,
     [device.device_id]
   );
@@ -805,7 +819,7 @@ async function getWemosState(deviceId = null) {
     ...device,
     channels: sets,
     // V0 UI 호환용 첫 번째 OS 상태
-    current_state: sets.find(set => set.output_pin === "OS1")?.current_state || "OFF"
+    current_state: sets.find(set => set.Degital_output === "OS1")?.current_state || "OFF"
   };
 }
 
@@ -855,33 +869,38 @@ async function recordWemosState(deviceId,pin,newState,source,commandId=null,reco
   const state = parseWemosState(newState);
   if (!state) return;
 
-  const inputString = String(message.IStr ?? message.sendString ?? "").slice(0, 10000);
-  const outputString = String(message.OStr ?? message.receiveString ?? "").slice(0, 10000);
+  const reportedInputString = message.IStr ?? message.sendString;
+  const reportedOutputString = message.OStr ?? message.receiveString;
+  const reportedInputState = parseWemosState(message.inputState);
   const connection=await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
     const rows=await connectionQuery(connection,
-      `SELECT current_state,last_source FROM wemos_contact_sets WHERE device_id=? AND output_pin=? LIMIT 1`,
+      `SELECT current_state,input_state,last_source,input_string,output_string FROM wemos_contact_sets WHERE device_id=? AND Degital_output=? LIMIT 1 FOR UPDATE`,
       [deviceId,pin]);
 
-    if (!rows.length) {
-      await connectionQuery(connection,
-        `INSERT INTO wemos_contact_sets(device_id,set_name,input_pin,output_pin,active,current_state,last_source,input_string,output_string,sort_order)
-         VALUES(?,?,?,?,1,?,?,?,?,?)`,
-        [deviceId,`채널 ${channelNumberFromPin(pin).toString().padStart(2,"0")}`,inputPin,pin,state,source,inputString,outputString,channelNumberFromPin(pin)-1]);
-    } else {
-      await connectionQuery(connection,
-        `UPDATE wemos_contact_sets
-         SET current_state=?,last_source=?,input_string=?,output_string=?,updated_at=?
-         WHERE device_id=? AND output_pin=?`,
-        [state,source,inputString,outputString,toKoreaDateTime(new Date()),deviceId,pin]);
-    }
-
+    const inputString = String(reportedInputString ?? rows[0]?.input_string ?? "").slice(0, 10000);
+    const outputString = String(reportedOutputString ?? rows[0]?.output_string ?? "").slice(0, 10000);
+    const inputState = reportedInputState || rows[0]?.input_state || "OFF";
     const previousState=rows.length ? String(rows[0].current_state) : null;
     const changed=previousState!==state;
     const effectiveSource=changed ? source : (rows[0]?.last_source || source);
+
+    if (!rows.length) {
+      await connectionQuery(connection,
+        `INSERT INTO wemos_contact_sets(device_id,set_name,Digital_input,Degital_output,active,current_state,input_state,last_source,input_string,output_string,sort_order)
+         VALUES(?,?,?,?,1,?,?,?,?,?,?)`,
+        [deviceId,`채널 ${channelNumberFromPin(pin).toString().padStart(2,"0")}`,inputPin,pin,state,inputState,effectiveSource,inputString,outputString,channelNumberFromPin(pin)-1]);
+    } else {
+      await connectionQuery(connection,
+        `UPDATE wemos_contact_sets
+         SET current_state=?,input_state=?,last_source=?,input_string=?,output_string=?,updated_at=?
+         WHERE device_id=? AND Degital_output=?`,
+        [state,inputState,effectiveSource,inputString,outputString,toKoreaDateTime(new Date()),deviceId,pin]);
+    }
+
     const now=new Date();
     const databaseTime=toKoreaDateTime(now);
     const effectiveCommandId=changed&&recordDeviceCommand?crypto.randomUUID():commandId;
@@ -897,6 +916,10 @@ async function recordWemosState(deviceId,pin,newState,source,commandId=null,reco
       await connectionQuery(connection,
         `UPDATE wemos_devices SET last_source=?,last_seen_at=?,updated_at=? WHERE device_id=?`,
         [effectiveSource,databaseTime,databaseTime,deviceId]);
+    }
+
+    if (typeof message.ip === "string" && message.ip.length <= 45) {
+      await connectionQuery(connection, `UPDATE wemos_devices SET last_ip=? WHERE device_id=?`, [message.ip,deviceId]);
     }
 
     if (changed) {
@@ -924,14 +947,17 @@ async function recordWemosState(deviceId,pin,newState,source,commandId=null,reco
     const event = {
       type: changed ? "stateChanged" : "state",
       deviceId,
-      pin,
+      OutputSignal: pin,
       state,
+      OutputState: state,
       source: effectiveSource,
       changedAt: now.toISOString(),
       deviceConnected: isWemosConnected(deviceId),
-      inputPin,
+      InputSignal: inputPin,
+      inputState,
       IStr: inputString,
-      OStr: outputString
+      OStr: outputString,
+      ...(typeof message.ip === "string" && message.ip.length <= 45 ? { ip:message.ip } : {})
     };
     if (changed) {
       event.previousState=previousState;
@@ -941,7 +967,7 @@ async function recordWemosState(deviceId,pin,newState,source,commandId=null,reco
 
     if(changed&&recordDeviceCommand) {
       broadcastWemosBrowsers({
-        type:"commandQueued",deviceId,commandId:effectiveCommandId,pin,state,
+        type:"commandQueued",deviceId,commandId:effectiveCommandId,OutputSignal:pin,state,
         outputString,requester:deviceId,status:"ACKED",createdAt:now.toISOString()
       });
     }
@@ -960,10 +986,10 @@ async function deliverWemosCommand(deviceId,commandId,pin,desiredState,requester
     type:"command",
     deviceId,
     commandId,
-    pin,
-    state:desiredState,
+    OutputSignal:pin,
+    InputSignal:`IS${channelNumberFromPin(pin)}`,
+    severSignal:desiredState,
     OStr:String(outputString||""),
-    outputString:String(outputString||""),
     requester
   });
 
@@ -975,7 +1001,7 @@ async function deliverWemosCommand(deviceId,commandId,pin,desiredState,requester
 
   if (result.affectedRows > 0) {
     broadcastWemosBrowsers({
-      type:"commandAck",deviceId,commandId,pin,state:desiredState,
+      type:"commandAck",deviceId,commandId,OutputSignal:pin,state:desiredState,
       outputString:String(outputString||""),status:"DELIVERED",changedAt:now.toISOString()
     });
     return true;
@@ -996,6 +1022,11 @@ async function queueWemosCommand(deviceId,pin,desiredState,requester,outputStrin
   const deviceRows=await query(`SELECT device_id,active FROM wemos_devices WHERE device_id=? LIMIT 1`,[deviceId]);
   if(!deviceRows.length || Number(deviceRows[0].active)!==1) {
     throw new Error("사용할 수 없는 Wemos 장치입니다.");
+  }
+
+  if (!outputString) {
+    const channelRows = await query(`SELECT output_string FROM wemos_contact_sets WHERE device_id=? AND Degital_output=? LIMIT 1`, [deviceId,pin]);
+    outputString = String(channelRows[0]?.output_string ?? "").slice(0,10000);
   }
 
   const commandId=crypto.randomUUID(), createdAt=new Date(), databaseTime=toKoreaDateTime(createdAt);
@@ -1038,7 +1069,7 @@ async function queueWemosCommand(deviceId,pin,desiredState,requester,outputStrin
 
   for (const row of cancelledCommands) {
     broadcastWemosBrowsers({
-      type:"commandAck",deviceId,commandId:row.command_id,pin:row.pin_name,
+      type:"commandAck",deviceId,commandId:row.command_id,OutputSignal:row.pin_name,
       state:row.desired_state,outputString:row.output_string||"",
       status:"CANCELLED",changedAt:createdAt.toISOString()
     });
@@ -1047,12 +1078,12 @@ async function queueWemosCommand(deviceId,pin,desiredState,requester,outputStrin
   await trimWemosTable("wemos_device_commands",1000,deviceId);
 
   broadcastWemosBrowsers({
-    type:"commandQueued",deviceId,commandId,pin,state,outputString,
+    type:"commandQueued",deviceId,commandId,OutputSignal:pin,state,outputString,
     requester,status:"PENDING",createdAt:createdAt.toISOString()
   });
 
   await deliverWemosCommand(deviceId,commandId,pin,state,requester,outputString);
-  return {commandId,deviceId,pin,state,outputString};
+  return {commandId,deviceId,OutputSignal:pin,state,outputString};
 }
 
 async function flushPendingWemosCommand(deviceId) {
@@ -1071,7 +1102,7 @@ async function flushPendingWemosCommand(deviceId) {
     }
     await connection.commit();
   } catch(err){try{await connection.rollback();}catch{}throw err;} finally{connection.release();}
-  for(const row of cancelled) broadcastWemosBrowsers({type:"commandAck",deviceId,commandId:row.command_id,pin:row.pin_name,state:row.desired_state,status:"CANCELLED",changedAt:new Date().toISOString()});
+  for(const row of cancelled) broadcastWemosBrowsers({type:"commandAck",deviceId,commandId:row.command_id,OutputSignal:row.pin_name,state:row.desired_state,status:"CANCELLED",changedAt:new Date().toISOString()});
   const rows=[...latestByPin.values()].sort((a,b)=>Number(a.id)-Number(b.id));
   if(rows.length){
     const row=rows[0];
@@ -1080,6 +1111,11 @@ async function flushPendingWemosCommand(deviceId) {
 }
 async function handleWemosDeviceMessage(ws,message) {
   const deviceId=String(ws.deviceId||"");
+  if (!message || typeof message !== "object" || Array.isArray(message)) return;
+  if (message.deviceId !== undefined && String(message.deviceId) !== deviceId) {
+    ws.close(1008,"Device ID mismatch");
+    return;
+  }
 
   if(message.type==="hello") {
     if(String(message.deviceId||"")!==deviceId){ws.close(1008,"Device ID mismatch");return;}
@@ -1088,7 +1124,7 @@ async function handleWemosDeviceMessage(ws,message) {
       wemosDeviceSockets.get(deviceId).close(1012,"Device reconnected");
     }
 
-    ws.pin=String(message.pin||"OS1");
+    ws.OutputSignal=normalizeWemosPin(message.OutputSignal ?? message.pin ?? "OS1");
     ws.wemosIdentified=true;
     wemosDeviceSockets.set(deviceId,ws);
     if(deviceId===WEMOS_DEVICE_ID) wemosDeviceSocket=ws;
@@ -1099,14 +1135,14 @@ async function handleWemosDeviceMessage(ws,message) {
     for (let index=0; index<WEMOS_CHANNEL_COUNT; index++) {
       const inputPin=inputs[index] || `IS${index+1}`;
       const outputPin=outputs[index] || `OS${index+1}`;
-      if (!/^IS\\d+$/.test(inputPin) || !/^OS\\d+$/.test(outputPin)) continue;
+      if (inputPin !== `IS${index+1}` || outputPin !== `OS${index+1}`) continue;
 
       await query(
-        `INSERT INTO wemos_contact_sets(device_id,set_name,input_pin,output_pin,sort_order)
+        `INSERT INTO wemos_contact_sets(device_id,set_name,Digital_input,Degital_output,sort_order)
          VALUES(?,?,?,?,?)
          ON DUPLICATE KEY UPDATE
            set_name=IF(set_name='',VALUES(set_name),set_name),
-           output_pin=VALUES(output_pin),
+           Degital_output=VALUES(Degital_output),
            sort_order=VALUES(sort_order)`,
         [deviceId,`채널 ${String(index+1).padStart(2,"0")}`,inputPin,outputPin,index]
       );
@@ -1121,17 +1157,19 @@ async function handleWemosDeviceMessage(ws,message) {
   }
 
   if(!ws.wemosIdentified){ws.close(1008,"Device hello required");return;}
+  if(wemosDeviceSockets.get(deviceId)!==ws)return;
 
   if(message.type==="state") {
-    const state=parseWemosState(message.state);
+    const state=parseWemosState(message.OutputState ?? message.state);
     if(!state)return;
 
-    const pin=normalizeWemosPin(message.pin||"");
+    const pin=normalizeWemosPin(message.OutputSignal ?? message.pin ?? "");
     if(!pin)return;
+    const inputSignal=message.InputSignal ?? message.inputPin;
+    if (inputSignal !== undefined && inputSignal !== `IS${channelNumberFromPin(pin)}`) return;
+    if (message.inputState !== undefined && !parseWemosState(message.inputState)) return;
 
     const reportedSource=String(message.source||"");
-    if(reportedSource==="CLIENT")return;
-
     const deviceChange=reportedSource==="WEMOS"||reportedSource===deviceId;
     const source=(deviceChange?deviceId:reportedSource||deviceId).slice(0,100);
 
@@ -1145,17 +1183,22 @@ async function handleWemosDeviceMessage(ws,message) {
   }
 
   if(message.type==="channelString") {
-    const pin=normalizeWemosPin(message.pin||"");
+    const pin=normalizeWemosPin(message.OutputSignal ?? message.pin ?? "");
     if(!pin)return;
+    const inputSignal=message.InputSignal ?? message.inputPin;
+    if (inputSignal !== undefined && inputSignal !== `IS${channelNumberFromPin(pin)}`) return;
+    if (message.IStr === undefined && message.sendString === undefined) return;
     const inputString=String(message.IStr ?? message.sendString ?? "").slice(0,10000);
+    const now=toKoreaDateTime(new Date());
     await query(
-      `UPDATE wemos_contact_sets SET input_string=?,updated_at=? WHERE device_id=? AND output_pin=?`,
-      [inputString,toKoreaDateTime(new Date()),deviceId,pin]
+      `UPDATE wemos_contact_sets SET input_string=?,updated_at=? WHERE device_id=? AND Degital_output=?`,
+      [inputString,now,deviceId,pin]
     );
+    await query(`UPDATE wemos_devices SET last_seen_at=? WHERE device_id=?`,[now,deviceId]);
     broadcastWemosBrowsers({
       type:"channelString",
-      deviceId,pin,
-      inputPin:`IS${channelNumberFromPin(pin)}`,
+      deviceId,OutputSignal:pin,
+      InputSignal:`IS${channelNumberFromPin(pin)}`,
       IStr:inputString,
       changedAt:new Date().toISOString()
     });
@@ -1173,10 +1216,12 @@ async function handleWemosDeviceMessage(ws,message) {
     );
     if(!rows.length)return;
 
-    const status=message.success===false?"FAILED":"ACKED";
-    const state=parseWemosState(message.state);
-    const pin=normalizeWemosPin(message.pin||rows[0].pin_name||"");
-    const outputString=String(message.OStr ?? message.outputString ?? rows[0].output_string ?? "");
+    if (!["PENDING", "DELIVERED"].includes(rows[0].status)) return;
+    const state=parseWemosState(message.OutputState ?? message.state);
+    const pin=normalizeWemosPin(message.OutputSignal ?? message.pin ?? rows[0].pin_name ?? "");
+    if (pin !== normalizeWemosPin(rows[0].pin_name)) return;
+    const status=message.success===true && state===rows[0].desired_state ? "ACKED" : "FAILED";
+    const outputString=String(message.OStr ?? message.receiveString ?? message.outputString ?? rows[0].output_string ?? "").slice(0,10000);
 
     if(status==="ACKED"&&state===rows[0].desired_state) {
       await recordWemosState(
@@ -1193,13 +1238,29 @@ async function handleWemosDeviceMessage(ws,message) {
     );
 
     broadcastWemosBrowsers({
-      type:"commandAck",deviceId,commandId,pin,
+      type:"commandAck",deviceId,commandId,OutputSignal:pin,
       state:state||rows[0].desired_state,
       outputString,status,changedAt:now.toISOString()
     });
 
     await flushPendingWemosCommand(deviceId);
   }
+}
+
+function attachWemosDeviceMessageHandler(ws,authorization) {
+  let messageChain=Promise.resolve();
+  let pendingMessages=0;
+  ws.on("message",data=>{
+    if (pendingMessages >= 64) { ws.close(1008,"Too many pending device messages"); return; }
+    pendingMessages++;
+    messageChain=messageChain.then(async()=>{
+      if (!await authorization || ws.readyState !== WebSocket.OPEN) return;
+      await handleWemosDeviceMessage(ws,JSON.parse(data.toString()));
+    }).catch(err=>{
+      console.error(`[WS Wemos ${ws.deviceId}]`,err);
+    }).finally(()=>{pendingMessages--;});
+  });
+  return () => messageChain;
 }
 
 // ---------------------------------------------------------
@@ -1213,16 +1274,22 @@ wss.on("connection", async (ws, req) => {
     const authorization = req.headers.authorization || "";
     const providedToken = authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
     if (!deviceId || !providedToken) { ws.close(1008, "Device authentication failed"); return; }
-    const deviceRows = await query(`SELECT device_id,active,token_hash FROM wemos_devices WHERE device_id=? LIMIT 1`, [deviceId]);
-    if (!deviceRows.length || Number(deviceRows[0].active)!==1) { ws.close(1008, "Unknown or inactive device"); return; }
-    const tokenHash = crypto.createHash("sha256").update(providedToken).digest("hex");
-    const configuredHash = String(deviceRows[0].token_hash || "");
-    if (!configuredHash || tokenHash.length !== configuredHash.length || !crypto.timingSafeEqual(Buffer.from(tokenHash), Buffer.from(configuredHash))) { ws.close(1008, "Device authentication failed"); return; }
     ws.role = "wemos-device";
     ws.deviceId = deviceId;
     ws.isAlive = true;
     ws.on("pong",()=>{ws.isAlive=true;});
-    ws.on("message",async data=>{try{await handleWemosDeviceMessage(ws,JSON.parse(data.toString()));}catch(err){console.error(`[WS Wemos ${deviceId}]`,err);}});
+    const deviceAuthorization=query(`SELECT device_id,active,token_hash FROM wemos_devices WHERE device_id=? LIMIT 1`, [deviceId]).then(deviceRows=>{
+      if (!deviceRows.length || Number(deviceRows[0].active)!==1) { ws.close(1008, "Unknown or inactive device"); return false; }
+      const tokenHash = crypto.createHash("sha256").update(providedToken).digest("hex");
+      const configuredHash = String(deviceRows[0].token_hash || "");
+      if (!configuredHash || tokenHash.length !== configuredHash.length || !crypto.timingSafeEqual(Buffer.from(tokenHash), Buffer.from(configuredHash))) { ws.close(1008, "Device authentication failed"); return false; }
+      return true;
+    }).catch(err=>{
+      console.error(`[WS Wemos ${deviceId}] authentication failed:`,err);
+      ws.close(1011,"Device authentication unavailable");
+      return false;
+    });
+    attachWemosDeviceMessageHandler(ws,deviceAuthorization);
     ws.on("close",async()=>{
       if(wemosDeviceSockets.get(deviceId)===ws){
         wemosDeviceSockets.delete(deviceId);
@@ -1248,9 +1315,9 @@ wss.on("connection", async (ws, req) => {
       const message=JSON.parse(data.toString());
       if(message.type==="lamp"){
         if(getPermissionLevel(ws.factoryUser)<2){sendWemos(ws,{type:"lampAck",ok:false,message:"출력 제어는 2등급 이상 회원만 사용할 수 있습니다."});return;}
-        const pin=normalizeWemosPin(message.pin||"OS1");
+        const pin=normalizeWemosPin(message.OutputSignal ?? message.pin ?? "OS1");
         if(!pin){sendWemos(ws,{type:"lampAck",ok:false,message:"출력 채널은 OS1~OS8 중 하나여야 합니다."});return;}
-        const state=parseWemosState(message.state);
+        const state=parseWemosState(message.severSignal ?? message.state);
         if(!state){sendWemos(ws,{type:"lampAck",ok:false,message:"상태는 ON 또는 OFF여야 합니다."});return;}
         const deviceId=String(message.deviceId||"").trim();
         if(!deviceId){sendWemos(ws,{type:"lampAck",ok:false,message:"장치를 선택해야 합니다."});return;}
@@ -1339,13 +1406,13 @@ function wemosAdminMiddleware(req,res,next) {
   requireLogin(req,res,()=>requireActiveAccount(req,res,()=>requireApproved(req,res,()=>requireAdminLevel(6)(req,res,next))));
 }
 async function getManagedWemosDevices() {
-  const devices=await query(`SELECT device_id,device_name,active,sort_order,last_seen_at,updated_at FROM wemos_devices ORDER BY sort_order,id`);
+  const devices=await query(`SELECT device_id,device_name,active,sort_order,last_ip,last_seen_at,updated_at FROM wemos_devices ORDER BY sort_order,id`);
   const result=[];
   for (const device of devices) {
     const deviceConnected=isWemosConnected(device.device_id);
     try {
-      const sets=await query(`SELECT id,set_name,input_pin,output_pin,active,current_state,last_source,input_string,output_string,sort_order FROM wemos_contact_sets WHERE device_id=? ORDER BY sort_order,id`,[device.device_id]);
-      result.push({...device,deviceConnected,sets:sets.map((set,index)=>({...set,set_name:set.set_name===set.output_pin?`채널 ${String(index+1).padStart(2,"0")}`:set.set_name,input_signal:set.input_pin,output_signal:set.output_pin,id:String(set.id)}))});
+      const sets=await query(`SELECT id,set_name,Digital_input,Degital_output,active,current_state,input_state,last_source,input_string,output_string,sort_order FROM wemos_contact_sets WHERE device_id=? ORDER BY sort_order,id`,[device.device_id]);
+      result.push({...device,deviceConnected,sets:sets.map((set,index)=>({...set,set_name:set.set_name===set.Degital_output?`채널 ${String(index+1).padStart(2,"0")}`:set.set_name,input_signal:set.Digital_input,output_signal:set.Degital_output,id:String(set.id)}))});
     } catch (err) {
       console.error(`Wemos 접점 세트 조회 오류 (${device.device_id}):`,err);
       result.push({...device,deviceConnected,sets:[]});
@@ -1380,8 +1447,8 @@ app.post("/api/admin/wemos/devices",wemosAdminMiddleware,async(req,res)=>{
     if(exists.length)return res.status(409).json({error:"장치 ID가 중복되었습니다."});
     const orderRows=await query(`SELECT COALESCE(MAX(sort_order),0)+1 AS next_order FROM wemos_devices`);
     await query(`INSERT INTO wemos_devices(device_id,device_name,token_hash,active,sort_order,current_state,last_source) VALUES(?,?,?,?,?,'OFF','BOOT')`,[deviceId,deviceName,tokenHash,1,orderRows[0].next_order]);
-    for(const [index,[inputPin,outputPin]] of WEMOS_FIXED_SETS.entries()) await query(`INSERT INTO wemos_contact_sets(device_id,set_name,input_pin,output_pin,sort_order) VALUES(?,?,?,?,?)`,[deviceId,outputPin,inputPin,outputPin,index]);
-    res.status(201).json({device:{device_id:deviceId,device_name:deviceName,active:1,sets:WEMOS_FIXED_SETS.map(([inputPin,outputPin],index)=>({set_name:`채널 ${String(index+1).padStart(2,"0")}`,input_pin:inputPin,output_pin:outputPin,input_signal:set.input_pin,output_signal:set.output_pin,active:1,sort_order:index}))},deviceToken:token});
+    for(const [index,[inputPin,outputPin]] of WEMOS_FIXED_SETS.entries()) await query(`INSERT INTO wemos_contact_sets(device_id,set_name,Digital_input,Degital_output,sort_order) VALUES(?,?,?,?,?)`,[deviceId,outputPin,inputPin,outputPin,index]);
+    res.status(201).json({device:{device_id:deviceId,device_name:deviceName,active:1,sets:WEMOS_FIXED_SETS.map(([inputPin,outputPin],index)=>({set_name:`채널 ${String(index+1).padStart(2,"0")}`,Digital_input:inputPin,Degital_output:outputPin,input_signal:inputPin,output_signal:outputPin,current_state:"OFF",input_state:"OFF",active:1,sort_order:index}))},deviceToken:token});
   }catch(err){console.error("Wemos 장치 등록 오류:",err);res.status(500).json({error:"Wemos 장치를 등록하지 못했습니다."});}
 });
 app.put("/api/admin/wemos/devices/:deviceId",wemosAdminMiddleware,async(req,res)=>{

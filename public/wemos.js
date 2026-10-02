@@ -76,7 +76,7 @@ function setState(state = {}) {
   if ($("device")) $("device").textContent = state.device_id || "-";
 
   for (const channel of state.channels || []) {
-    setPinState(channel.output_pin, channel.current_state);
+    setPinState(channel.Degital_output, channel.current_state);
   }
 
   if ($("source")) $("source").textContent = state.last_source || "-";
@@ -108,7 +108,7 @@ function renderCommands() {
     <tr>
       <td>${escapeHtml(formatDate(row.changed_at))}</td>
       <td>${escapeHtml(row.device_id || "-")}</td>
-      <td>${escapeHtml(row.pin_name || row.pin || "OS1")}</td>
+      <td>${escapeHtml(row.pin_name || row.OutputSignal || row.pin || "OS1")}</td>
       <td>${escapeHtml(row.desired_state)}</td>
       <td>${escapeHtml(row.requester)}</td>
       <td>${escapeHtml(row.status)}</td>
@@ -227,15 +227,15 @@ function handle(message) {
 
       if ($("msg")) {
         $("msg").textContent =
-          `${message.pin}: ${message.previousState} → ${message.state} (${message.source})`;
+          `${message.OutputSignal ?? message.pin}: ${message.previousState} → ${message.OutputState ?? message.state} (${message.source})`;
       }
 
       pushHistory({
         device_id: message.deviceId,
         changed_at: message.changedAt,
-        pin_name: message.pin,
+        pin_name: message.OutputSignal ?? message.pin,
         previous_state: message.previousState,
-        new_state: message.state,
+        new_state: message.OutputState ?? message.state,
         source: message.source,
         command_id: message.commandId
       });
@@ -245,7 +245,7 @@ function handle(message) {
       upsertCommand({
         command_id: message.commandId,
         device_id: message.deviceId,
-        pin_name: message.pin,
+        pin_name: message.OutputSignal ?? message.pin,
         desired_state: message.state,
         requester: message.requester,
         status: message.status,
@@ -257,7 +257,7 @@ function handle(message) {
       upsertCommand({
         command_id: message.commandId,
         device_id: message.deviceId,
-        pin_name: message.pin,
+        pin_name: message.OutputSignal ?? message.pin,
         desired_state: message.state,
         status: message.status,
         changed_at: message.changedAt
@@ -267,7 +267,7 @@ function handle(message) {
     case "lampAck":
       if ($("msg")) {
         $("msg").textContent = message.ok
-          ? `${message.pin || "OS1"} ${message.state || ""} 명령 저장 완료 / ${message.commandId || ""}`
+          ? `${message.OutputSignal ?? message.pin ?? "OS1"} ${message.state || ""} 명령 저장 완료 / ${message.commandId || ""}`
           : (message.message || "출력 명령 처리에 실패했습니다.");
       }
       break;
@@ -279,8 +279,8 @@ function handle(message) {
 }
 
 function updateRealtimeState(message) {
-  const pin = String(message.pin || "").toUpperCase();
-  const state = String(message.state || "").toUpperCase();
+  const pin = String(message.OutputSignal ?? message.pin ?? "").toUpperCase();
+  const state = String(message.OutputState ?? message.state ?? "").toUpperCase();
 
   if (!/^OS[1-8]$/.test(pin)) return;
   if (!["ON", "OFF"].includes(state)) return;
@@ -379,10 +379,10 @@ function configureOutputControls() {
     offButton.disabled = permission < 2;
 
     onButton.onclick = () =>
-      send({ type: "lamp", pin, state: "ON" });
+      send({ type: "lamp", OutputSignal: pin, severSignal: "ON" });
 
     offButton.onclick = () =>
-      send({ type: "lamp", pin, state: "OFF" });
+      send({ type: "lamp", OutputSignal: pin, severSignal: "OFF" });
   }
 }
 
