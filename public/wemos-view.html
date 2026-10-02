@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Wemos D1 R1 - 접점 상태 조회</title>
+	<link rel="stylesheet" href="/style.css?v=20260930-1">
+	<script src="/page-settings.js?v=20260928-1" defer></script>
+	<script src="/logout.js?v=20260930-1" defer></script>
+</head>
+
+<body class="wemos-page">
+	<main class="wemos-shell">
+		<header class="wemos-header">
+			<div class="wemos-heading">
+				<p class="wemos-eyebrow">WEMOS D1 R1 <span>·</span> OUTPUT MONITOR</p>
+				<h1>접점 상태 조회</h1>
+			</div>
+			<nav class="wemos-page-links" aria-label="Wemos 페이지">
+				<a class="link" href="/">현황판</a>
+				<a id="controlLink" class="link" href="/wemos.html" hidden>접점 제어</a>
+				<a class="link" href="/wemos-admin.html">장치 관리</a>
+				<button class="logout-button" onclick="logout()">로그아웃</button>
+			</nav>
+		</header>
+
+		<section class="wemos-statusbar" aria-label="장치 연결 정보">
+			<div class="status-item"><span class="status-label">서버 연결</span><b id="server" class="connection-value">연결
+					중</b></div>
+			<div class="status-item"><span class="status-label">접속 계정</span><b id="user" class="status-detail">확인 중</b>
+			</div>
+			<div class="status-item"><span class="status-label">권한</span><b id="permission" class="status-detail">확인
+					중</b></div>
+		</section>
+
+		<section class="channel-section" aria-labelledby="channel-title">
+			<div class="section-heading">
+				<div>
+					<p class="wemos-eyebrow">OUTPUT MONITOR</p>
+					<h2 id="channel-title">핀별 상태</h2>
+				</div>
+			</div>
+			<div class="channel-grid" hidden>
+				<article class="channel-card channel-d8">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 01</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="stateD8" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+				</article>
+				<article class="channel-card channel-d9">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 02</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="state" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+				</article>
+				<article class="channel-card channel-d10">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 03</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="stateD10" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+				</article>
+				<article class="channel-card channel-d11">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 04</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="stateD11" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+				</article>
+			</div>
+			<div id="activeWemosWindows" class="active-wemos-windows">
+				<p class="empty-state">활성 Wemos 장치를 불러오는 중입니다.</p>
+			</div>
+			<div class="report-line"><span>최근 변경 출처 <b id="source">-</b></span><span>마지막 보고 <b id="seen">-</b></span>
+			</div>
+			<p id="msg" class="wemos-message" role="status" aria-live="polite"></p>
+		</section>
+
+	</main>
+	<script src="/wemos-view.js?v=20260929-2"></script>
+	<script src="/wemos-active-devices.js?v=20260929-2"></script>
+</body>
+
+</html>

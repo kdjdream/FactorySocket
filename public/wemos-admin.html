@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Wemos D1 R1 - 장치 관리</title>
+  <link rel="stylesheet" href="/style.css?v=20260930-1">
+  <script src="/page-settings.js?v=20260929-1" defer></script>
+  <script src="/logout.js?v=20260930-1" defer></script>
+</head>
+
+<body class="wemos-page">
+  <main class="wemos-shell">
+    <header class="wemos-header">
+      <div class="wemos-heading">
+        <p class="wemos-eyebrow">WEMOS D1 R1 <span>·</span> DEVICE ADMINISTRATION</p>
+        <h1>장치 관리</h1>
+      </div>
+      <nav class="wemos-page-links" aria-label="Wemos 페이지">
+        <a class="link" href="/">현황판</a>
+        <a class="link" href="/wemos.html">접점 제어</a>
+        <a class="link" href="/wemos-view.html">상태 조회</a>
+        <button class="logout-button" onclick="logout()">로그아웃</button>
+
+      </nav>
+    </header>
+
+    <section class="wemos-statusbar" aria-label="관리 상태">
+      <div class="status-item"><span class="status-label">접속 계정</span><b id="user" class="status-detail">확인 중</b></div>
+      <div class="status-item"><span class="status-label">권한</span><b id="permission" class="status-detail">확인 중</b>
+      </div>
+      <div class="status-item"><span class="status-label">등록 장치</span><b id="deviceCount" class="status-detail">0대</b>
+      </div>
+    </section>
+
+    <section class="history-section wemos-admin-section" aria-labelledby="device-title">
+      <div class="section-heading">
+        <div>
+          <p class="wemos-eyebrow">DEVICE SETUP</p>
+          <h2 id="device-title">Wemos 장치 관리</h2>
+        </div>
+        <p class="section-note">장치 ID와 이름을 관리하고, 장치별 접점 채널을 설정합니다.</p>
+      </div>
+
+      <div class="wemos-admin-layout">
+        <div class="wemos-admin-block wemos-register-block">
+          <div class="admin-block-heading"><span class="admin-block-index">01</span>
+            <div>
+              <h3>장치 추가</h3>
+              <p>새 Wemos를 등록하고 전용 토큰을 발급합니다.</p>
+            </div>
+          </div>
+          <form id="deviceForm" class="wemos-admin-form">
+            <label>장치 ID<input id="newDeviceId" required maxlength="100" pattern="[A-Za-z0-9_-]{2,100}"
+                placeholder="예: WEMOS-D1-002" style="padding: 13px 12px; font-size: 16px;"></label>
+            <label>장치 이름<input id="newDeviceName" required maxlength="100" placeholder="예: 포장라인 Wemos"
+                style="padding: 13px 12px; font-size: 16px;"></label>
+            <p id="deviceMessage" class="wemos-message" role="alert"></p>
+            <button class="output-button admin-submit" type="submit">장치 등록</button>
+          </form>
+          <div id="tokenResult" class="device-token-result" hidden></div>
+        </div>
+
+        <div class="wemos-admin-block wemos-list-block">
+          <div class="admin-block-heading"><span class="admin-block-index">02</span>
+            <div>
+              <h3>등록 장치</h3>
+              <p>편집 버튼을 누르면 장치와 채널 설정이 펼쳐집니다. 드래그하여 배열 순서를 정하세요.</p>
+            </div>
+          </div>
+          <div class="wemos-device-table-wrap">
+            <table class="wemos-device-table">
+              <thead>
+                <tr>
+                  <th class="device-id-column">장치 ID</th>
+                  <th class="device-name-column">장치 이름</th>
+                  <th>상태</th>
+                  <th class="device-action-column">관리</th>
+                </tr>
+              </thead>
+              <tbody id="deviceRows"></tbody>
+            </table>
+          </div>
+          <p id="adminMessage" class="wemos-message" role="status"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="/wemos-admin.js?v=20260929-2"></script>
+</body>
+
+</html>

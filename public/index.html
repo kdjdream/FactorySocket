@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="/page-settings.js?v=20260928-1" defer></script>
+</head>
+
+<body>
+  <header>
+    <div>
+      <h1>KIMS FACTORIES V1.0</h1>
+      <p id="connection">● 서버 연결 중...</p>
+    </div>
+
+    <div class="header-actions">
+      <span id="userInfo" class="user-info">로그인 확인 중...</span>
+      <a id="controlLink" class="link" href="/control.html" style="display:none">수량 입력 화면</a>
+      <a id="wemosControlLink" class="link" href="/wemos.html" style="display:none">Wemos 제어</a>
+      <a id="wemosLink" class="link" href="/wemos-view.html">Wemos 보기</a>
+      <a id="productAdminLink" class="link" href="/product-admin.html" style="display:none">제품 관리</a>
+      <a id="profileLink" class="link" href="/profile.html">회원정보</a>
+      <button class="logout-button" onclick="logout()">로그아웃</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary">
+      <div class="card" id="summaryCard"><span>생산 품목</span><strong id="productCount">0</strong></div>
+      <div class="card" id="summaryQuantityCard"><span>총 생산수량</span><strong id="totalQuantity">0</strong></div>
+      <div class="card" id="targetCard"><span>총 목표수량</span><strong id="totalTarget">0</strong></div>
+      <div class="card rate-card" id="rateCard"><span>달성률</span><strong id="totalRate">0%</strong></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>제품별 생산 현황</h2>
+        <span id="lastUpdate">-</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>제품코드</th>
+              <th>제품명</th>
+              <th>현재수량</th>
+              <th>목표수량</th>
+              <th>달성률</th>
+              <th>상태</th>
+              <th id="changedByHeader">변경자</th>
+              <th id="updatedAtHeader">최종변경</th>
+            </tr>
+          </thead>
+          <tbody id="productTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
