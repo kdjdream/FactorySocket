@@ -76,10 +76,10 @@ function setState(state = {}) {
   if ($("device")) $("device").textContent = state.device_id || "-";
 
   for (const channel of state.channels || []) {
-    setPinState(channel.Degital_output, channel.current_state);
+    setPinState(channel.output_signal, channel.output_state);
   }
 
-  if ($("source")) $("source").textContent = state.last_source || "-";
+  if ($("source")) $("source").textContent = state.last_change_source || "-";
   if ($("seen")) $("seen").textContent = formatDate(state.last_seen_at);
 }
 
@@ -91,10 +91,10 @@ function renderHistory() {
     <tr>
       <td>${escapeHtml(formatDate(row.changed_at))}</td>
       <td>${escapeHtml(row.device_id || "-")}</td>
-      <td>${escapeHtml(row.pin_name || "OS1")}</td>
-      <td>${escapeHtml(row.new_state)}</td>
-      <td>${escapeHtml(row.String ?? "-")}</td>
-      <td>${escapeHtml(row.source)}</td>
+      <td>${escapeHtml(row.output_signal || "OS1")}</td>
+      <td>${escapeHtml(row.output_state)}</td>
+      <td>${escapeHtml(row.signal_message ?? "-")}</td>
+      <td>${escapeHtml(row.change_source)}</td>
     </tr>
   `).join("");
 }
@@ -105,12 +105,12 @@ function renderCommands() {
 
   target.innerHTML = commandRows.map(row => `
     <tr>
-      <td>${escapeHtml(formatDate(row.changed_at))}</td>
+      <td>${escapeHtml(formatDate(row.status_changed_at))}</td>
       <td>${escapeHtml(row.device_id || "-")}</td>
-      <td>${escapeHtml(row.pin_name || row.OutputSignal || row.pin || "OS1")}</td>
-      <td>${escapeHtml(row.desired_state)}</td>
-      <td>${escapeHtml(row.requester)}</td>
-      <td>${escapeHtml(row.status)}</td>
+      <td>${escapeHtml(row.output_signal || row.OutputSignal || row.pin || "OS1")}</td>
+      <td>${escapeHtml(row.requested_output_state)}</td>
+      <td>${escapeHtml(row.requested_by)}</td>
+      <td>${escapeHtml(row.command_status)}</td>
       <td>${escapeHtml(row.command_id || "-")}</td>
     </tr>
   `).join("");
@@ -122,7 +122,7 @@ function mergeHistory(rows = []) {
   for (const row of [...historyRows, ...rows]) {
     const key =
       row.command_id ||
-      `${row.changed_at}|${row.pin_name}|${row.source}|${row.new_state}`;
+      `${row.changed_at}|${row.output_signal}|${row.change_source}|${row.output_state}`;
 
     merged.set(key, row);
   }
@@ -140,18 +140,18 @@ function mergeCommands(rows = []) {
   for (const row of [...commandRows, ...rows]) {
     const previous = merged.get(row.command_id) || {};
 
-    const newRank = COMMAND_STATUS_RANK[row.status] || 0;
-    const oldRank = COMMAND_STATUS_RANK[previous.status] || 0;
+    const newRank = COMMAND_STATUS_RANK[row.command_status] || 0;
+    const oldRank = COMMAND_STATUS_RANK[previous.command_status] || 0;
 
     merged.set(row.command_id, {
       ...previous,
       ...row,
-      status: newRank >= oldRank ? row.status : previous.status
+      command_status: newRank >= oldRank ? row.command_status : previous.command_status
     });
   }
 
   commandRows = [...merged.values()]
-    .sort((a, b) => new Date(b.changed_at) - new Date(a.changed_at))
+    .sort((a, b) => new Date(b.status_changed_at) - new Date(a.status_changed_at))
     .slice(0, 50);
 
   renderCommands();
@@ -232,12 +232,12 @@ function handle(message) {
       pushHistory({
         device_id: message.deviceId,
         changed_at: message.changedAt,
-        pin_name: message.OutputSignal ?? message.pin,
-        previous_state: message.previousState,
-        new_state: message.OutputState ?? message.state,
-        source: message.source,
+        output_signal: message.OutputSignal ?? message.pin,
+        previous_output_state: message.previousState,
+        output_state: message.OutputState ?? message.state,
+        change_source: message.source,
         command_id: message.commandId,
-        String: message.String
+        signal_message: message.String
       });
       break;
 
@@ -245,11 +245,11 @@ function handle(message) {
       upsertCommand({
         command_id: message.commandId,
         device_id: message.deviceId,
-        pin_name: message.OutputSignal ?? message.pin,
-        desired_state: message.state,
-        requester: message.requester,
-        status: message.status,
-        changed_at: message.createdAt || message.changedAt
+        output_signal: message.OutputSignal ?? message.pin,
+        requested_output_state: message.state,
+        requested_by: message.requester,
+        command_status: message.status,
+        status_changed_at: message.createdAt || message.changedAt
       });
       break;
 
@@ -257,10 +257,10 @@ function handle(message) {
       upsertCommand({
         command_id: message.commandId,
         device_id: message.deviceId,
-        pin_name: message.OutputSignal ?? message.pin,
-        desired_state: message.state,
-        status: message.status,
-        changed_at: message.changedAt
+        output_signal: message.OutputSignal ?? message.pin,
+        requested_output_state: message.state,
+        command_status: message.status,
+        status_changed_at: message.changedAt
       });
       break;
 

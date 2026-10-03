@@ -180,44 +180,42 @@
 
           <div class="active-wemos-channels">
             ${(device.sets || []).map((set, index) => {
-              const state = set.current_state === "ON" ? "ON" : "OFF";
+              const state = set.output_state === "ON" ? "ON" : "OFF";
               const inputState = set.input_state === "ON" ? "ON" : "OFF";
-              const inputStringName = String(set.Digital_input).replace(/^IS([1-8])$/, "IStr$1");
-              const outputStringName = String(set.Degital_output).replace(/^OS([1-8])$/, "OStr$1");
+              const inputStringName = String(set.input_signal).replace(/^IS([1-8])$/, "IStr$1");
+              const outputStringName = String(set.output_signal).replace(/^OS([1-8])$/, "OStr$1");
 
               return `
-                <article class="channel-card channel-${escapeHtml(String(set.Degital_output).toLowerCase())}">
+                <article class="channel-card channel-${escapeHtml(String(set.output_signal).toLowerCase())}">
                   <div class="channel-card-head">
                     <div>
-                      ${viewOnly ? "" : `
-                        <div class="channel-device-identity">
-                          <code>${escapeHtml(device.device_id)}</code>
-                          <span>${escapeHtml(device.device_name || device.device_id)}</span>
-                        </div>
-                      `}
+                      <div class="channel-device-identity">
+                        <code>${escapeHtml(device.device_id)}</code>
+                        <span>${escapeHtml(device.device_name || device.device_id)}</span>
+                      </div>
                       <span class="channel-number">
                         CHANNEL ${String(index + 1).padStart(2, "0")}
                       </span>
-                      <h3>${escapeHtml(set.set_name)}</h3>
+                      <h3>${escapeHtml(set.channel_name)}</h3>
                     </div>
 
                     <div class="output-readout channel-last-source">
                       <span>최근 변경</span>
-                      <strong data-active-last-source="${escapeHtml(set.Degital_output)}">${escapeHtml(set.last_source || "-")}</strong>
-                      <time data-active-last-changed-at="${escapeHtml(set.Degital_output)}">${escapeHtml(formatChangedAt(set.last_changed_at ?? set.created_at))}</time>
+                      <strong data-active-last-source="${escapeHtml(set.output_signal)}">${escapeHtml(set.last_change_source || "-")}</strong>
+                      <time data-active-last-changed-at="${escapeHtml(set.output_signal)}">${escapeHtml(formatChangedAt(set.last_changed_at ?? set.created_at))}</time>
                     </div>
                   </div>
 
                   <div class="signal-path">
                     <span class="signal-state-group">
-                      <span class="signal-pin">${escapeHtml(set.Digital_input)}</span>
-                      <b class="pin-state" data-active-input-pin="${escapeHtml(set.Digital_input)}" data-state="${inputState}">${inputState}</b>
+                      <span class="signal-pin">${escapeHtml(set.input_signal)}</span>
+                      <b class="pin-state" data-active-input-pin="${escapeHtml(set.input_signal)}" data-state="${inputState}">${inputState}</b>
                     </span>
                     <span class="signal-state-group">
-                      <span class="signal-pin">${escapeHtml(set.Degital_output)}</span>
+                      <span class="signal-pin">${escapeHtml(set.output_signal)}</span>
                       <b
                         class="pin-state"
-                        data-active-pin="${escapeHtml(set.Degital_output)}"
+                        data-active-pin="${escapeHtml(set.output_signal)}"
                         data-state="${state}"
                       >
                         ${state}
@@ -225,39 +223,39 @@
                     </span>
                   </div>
                   <div class="signal-strings">
-                    <span>${escapeHtml(inputStringName)}: <code data-active-input-string="${escapeHtml(set.Digital_input)}">${escapeHtml(set.input_string || "")}</code></span>
-                    <span>${escapeHtml(outputStringName)}: <code data-active-output-string="${escapeHtml(set.Degital_output)}">${escapeHtml(set.output_string || "")}</code></span>
+                    <span data-wemos-istr>${escapeHtml(inputStringName)}: <code data-active-input-string="${escapeHtml(set.input_signal)}">${escapeHtml(set.input_message || "")}</code></span>
+                    <span data-wemos-ostr>${escapeHtml(outputStringName)}: <code data-active-output-string="${escapeHtml(set.output_signal)}">${escapeHtml(set.output_message || "")}</code></span>
                   </div>
 
                   ${
                     viewOnly
                       ? ""
                       : `
-                        <div class="wemos-output-strings">
+                        <div class="wemos-output-strings" data-wemos-ostr-inputs>
                           <label class="wemos-output-string">
                             <span>${escapeHtml(outputStringName)} ON</span>
-                            <input type="text" data-command-output-string="${escapeHtml(set.Degital_output)}" data-command-state="ON"
-                              value="${escapeHtml(set.output_string || "")}" maxlength="10000" autocomplete="off"
+                            <input type="text" data-command-output-string="${escapeHtml(set.output_signal)}" data-command-state="ON"
+                              value="${escapeHtml(set.output_message || "")}" maxlength="10000" autocomplete="off"
                               aria-label="${escapeHtml(outputStringName)} ON">
                           </label>
                           <label class="wemos-output-string">
                             <span>${escapeHtml(outputStringName)} OFF</span>
-                            <input type="text" data-command-output-string="${escapeHtml(set.Degital_output)}" data-command-state="OFF"
-                              value="${escapeHtml(set.output_string || "")}" maxlength="10000" autocomplete="off"
+                            <input type="text" data-command-output-string="${escapeHtml(set.output_signal)}" data-command-state="OFF"
+                              value="${escapeHtml(set.output_message || "")}" maxlength="10000" autocomplete="off"
                               aria-label="${escapeHtml(outputStringName)} OFF">
                           </label>
                         </div>
                         <div
                           class="channel-actions"
                           role="group"
-                          aria-label="${escapeHtml(set.set_name)} 출력 조작"
+                          aria-label="${escapeHtml(set.channel_name)} 출력 조작"
                         >
                           <button
                             class="output-button${state === "ON" ? " is-active" : ""}"
                             type="button"
                             data-active-command="true"
                             data-device-id="${escapeHtml(device.device_id)}"
-                            data-pin="${escapeHtml(set.Degital_output)}"
+                            data-pin="${escapeHtml(set.output_signal)}"
                             data-state="ON"
                             aria-pressed="${state === "ON"}"
                           >
@@ -270,7 +268,7 @@
                             type="button"
                             data-active-command="true"
                             data-device-id="${escapeHtml(device.device_id)}"
-                            data-pin="${escapeHtml(set.Degital_output)}"
+                            data-pin="${escapeHtml(set.output_signal)}"
                             data-state="OFF"
                             aria-pressed="${state === "OFF"}"
                           >
@@ -291,11 +289,11 @@
     // API 조회와 WebSocket 연결 사이의 타이밍 차이를 보정합니다.
     for (const device of devices) {
       for (const channel of device.sets || []) {
-        const cached = liveStates.get(`${device.device_id}:${channel.Degital_output}`);
+        const cached = liveStates.get(`${device.device_id}:${channel.output_signal}`);
         rememberLiveMessage({
-          deviceId: device.device_id, OutputSignal: channel.Degital_output,
-          OutputState: channel.current_state, inputState: channel.input_state,
-          source: channel.last_source, IStr: channel.input_string, OStr: channel.output_string,
+          deviceId: device.device_id, OutputSignal: channel.output_signal,
+          OutputState: channel.output_state, inputState: channel.input_state,
+          source: channel.last_change_source, IStr: channel.input_message, OStr: channel.output_message,
           ...cached,
           lastChangedAt: cached?.lastChangedAt ?? channel.last_changed_at ?? channel.created_at
         });
@@ -355,12 +353,12 @@
     if (["wemosSnapshot", "initialState"].includes(message.type) && message.state) {
       for (const channel of message.state.channels || []) {
         rememberLiveMessage({
-          deviceId: message.state.device_id, OutputSignal: channel.Degital_output,
-          InputSignal: channel.Digital_input,
-          OutputState: channel.current_state, inputState: channel.input_state,
-          source: channel.last_source,
+          deviceId: message.state.device_id, OutputSignal: channel.output_signal,
+          InputSignal: channel.input_signal,
+          OutputState: channel.output_state, inputState: channel.input_state,
+          source: channel.last_change_source,
           lastChangedAt: channel.last_changed_at ?? channel.created_at,
-          IStr: channel.input_string, OStr: channel.output_string
+          IStr: channel.input_message, OStr: channel.output_message
         });
       }
     }

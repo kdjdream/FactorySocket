@@ -13,6 +13,8 @@ Node.js, Express, MySQL/MariaDB, WebSocket으로 구성한 공장 생산 현황 
 7. [화면과 기능](#화면과-기능)
 8. [사용자 설정](#사용자-설정)
 9. [운영 시 주의사항](#운영-시-주의사항)
+10. [공통 페이지 제목](#공통-페이지-제목)
+11. [CSS 관리](#css-관리)
 
 ## 주요 기능
 
@@ -47,7 +49,7 @@ Node.js, Express, MySQL/MariaDB, WebSocket으로 구성한 공장 생산 현황 
 | 생산수량 입력 및 생산상태 변경 (`/control.html`) | 2~10등급 | 제품 수량과 생산상태 변경 |
 | Wemos 접점 제어 (`/wemos.html`) | 2~10등급 | 접점을 ON/OFF로 조작 |
 | 제품 관리 (`/product-admin.html`) | 6~10등급 | 제품 추가·수정·삭제 |
-| Wemos 장치 관리 (`/wemos-admin.html`) | 6~10등급 | 장치 및 접점 세트 관리 |
+| Wemos 장치 관리 (`/wemos-admin.html`) | 8~10등급 | 장치 및 접점 세트 관리 |
 | 회원 관리 및 가입 승인 (`/admin.html`) | 8~10등급 | 회원 승인·반려·수정·삭제 및 등급 부여 |
 | 회원정보 (`/profile.html`) | 로그인한 모든 등급 | 본인 정보 확인·수정 |
 | 개인 설정 (`/settings.html`) | 로그인한 활성 계정 | 본인 화면·알림 설정 변경 |
@@ -63,9 +65,9 @@ Node.js, Express, MySQL/MariaDB, WebSocket으로 구성한 공장 생산 현황 
 | 3 | 2등급 기능과 동일 |
 | 4 | 2등급 기능과 동일 |
 | 5 | 2등급 기능과 동일 |
-| 6 | 2등급 기능 + 제품 관리, Wemos 장치 관리 |
+| 6 | 2등급 기능 + 제품 관리 |
 | 7 | 6등급 기능과 동일 |
-| 8 | 6등급 기능 + 회원 관리 및 신규 가입 승인. 1~7등급 회원 관리 가능 |
+| 8 | 6등급 기능 + Wemos 장치 관리, 회원 관리 및 신규 가입 승인. 1~7등급 회원 관리 가능 |
 | 9 | 8등급 기능. 1~8등급 회원 관리 가능 |
 | 10 | 8등급 기능. 1~9등급 회원 관리 가능 |
 
@@ -78,7 +80,7 @@ Node.js, Express, MySQL/MariaDB, WebSocket으로 구성한 공장 생산 현황 
 - 관리자는 자신의 계정과 권한 등급을 변경하거나 삭제할 수 없습니다.
 - 회원 권한 등급을 변경할 때도 로그인한 관리자의 등급보다 낮은 등급만 부여할 수 있습니다.
 - 6~10등급만 제품관리 페이지에 접근할 수 있습니다.
-- 6~10등급만 Wemos 장치 관리 페이지에 접근할 수 있습니다.
+- 8~10등급만 Wemos 장치 관리 페이지와 관리 API를 이용할 수 있습니다. 장치 조회·등록·수정·삭제, 순서 변경, 채널 설정 변경 모두 같은 기준을 적용합니다.
 - 2등급 이상만 생산수량·상태를 변경하고 Wemos 접점을 제어할 수 있습니다.
 - 1등급도 승인된 계정이면 접점 상태 조회와 이력 조회가 가능합니다. 상태 조회만으로 접점을 제어할 수는 없습니다.
 - 현황판, 접점 상태 조회, 생산 입력, 제품 관리 및 Wemos 기능은 승인된 활성 계정에서 사용할 수 있습니다. 회원정보는 로그인한 계정에서 확인할 수 있습니다.
@@ -140,6 +142,69 @@ npm start
 http://localhost:8080
 ```
 
+## 공통 페이지 제목
+
+모든 페이지의 브라우저 탭 제목은 `public/page-settings.js` 상단의 `PAGE_TITLE` 한 곳에서 관리합니다. 현재 제목은 `KIMS FACTORIES V1.0`입니다.
+
+```javascript
+const PAGE_TITLE = "KIMS FACTORIES V1.0";
+document.title = PAGE_TITLE;
+```
+
+제목을 변경하려면 `PAGE_TITLE`의 문자열만 수정하고 파일을 저장한 뒤 페이지를 새로고침하세요. 배포 환경에서는 변경된 파일을 재배포해야 하며, 이전 제목이 남으면 강력 새로고침을 하세요. 페이지별 HTML을 각각 수정하거나 DB 설정을 변경할 필요는 없습니다.
+
+로그인·회원가입·현황판·사용자 설정·관리·Wemos 제어 및 조회 화면 모두 이 공통 제목을 사용합니다. HTML의 `<title>`은 공통 스크립트 실행 전의 초기 표시용이며, JavaScript가 실행되면 공통 값으로 바뀝니다. 화면 안의 `<h1>`·메뉴·페이지 기능 이름은 변경하지 않습니다.
+
+새 HTML 페이지를 추가할 때에도 `<head>`에 다음 스크립트를 연결하면 같은 제목과 공통 화면 설정이 적용됩니다.
+
+```html
+<script src="/page-settings.js" defer></script>
+```
+
+### 상단 사용자 정보
+
+모든 페이지의 우측 상단에는 로그인한 회원의 `Log in : 아이디 (이름, N등급)`이 표시됩니다. 이 표시는 `public/page-settings.js`의 `applyPageUser()`와 `refreshPageUser()`에서 공통 처리하며, 비로그인 상태에는 표시하지 않습니다. `.page-user-bar`는 문서 흐름 안에서 우측 정렬되므로 메뉴나 본문을 덮지 않습니다. 기존 메뉴 안의 사용자 표시와 중복되지 않고, 화면 복귀 시 최신 회원 정보와 메뉴 권한을 다시 확인합니다. Wemos의 연결 상태·접속 계정 요약 영역 등 기존 화면 정보는 유지합니다.
+
+### Wemos 헤더 문구
+
+Wemos 제어·조회·관리 화면의 상단 문구는 모두 `WEMOS D1 R1 · DEVICE CONTROL`을 사용합니다. `public/style.css`의 다음 두 규칙에서 앞뒤 문구를 수정하면 세 페이지에 함께 적용됩니다.
+
+```css
+.wemos-heading > .wemos-eyebrow::before { content: "WEMOS D1 R1"; }
+.wemos-heading > .wemos-eyebrow::after { content: "DEVICE CONTROL"; }
+```
+
+HTML에는 공통 표시 요소 `<p class="wemos-eyebrow"><span>·</span></p>`만 두며, 가운데 점의 강조 색상은 기존 스타일을 사용합니다. 이 규칙은 헤더 안에만 적용되어 페이지 제목과 본문 구역 문구는 유지됩니다.
+
+## CSS 관리
+
+모든 화면은 `public/style.css`를 공통으로 사용합니다. CSS는 다음 10개 주석 구역으로 나눠 관리하며, 기존 선택자 우선순위와 미디어 조건의 적용 순서를 유지합니다.
+
+| 구역 | 내용 |
+| --- | --- |
+| 01 | 공통 초기값, 가로 넘침 방지, 반응형 안전 규칙 |
+| 02 | 공통 배치·메뉴·생산 현황 및 입력 구성요소 |
+| 03 | 로그인·회원가입·회원정보 폼 |
+| 04 | 회원·제품 관리 표와 편집 폼 |
+| 05 | 사용자 테마·보기 모드와 공통 어두운 색상표 |
+| 06 | Wemos 페이지 변수·전체 배치 |
+| 07 | 채널 카드·IS/OS 상태·문자열·버튼·이력 표 |
+| 08 | Wemos 장치 관리·토큰·편집 표 |
+| 09 | 전체 페이지 공통 시각 스타일과 페이지별 보완 |
+| 10 | 최종 어두운 테마·동작 감소 설정 |
+
+공통 밝은 색상과 글꼴은 `:root`의 `--factory-*` 변수에서, 어두운 색상은 `html[data-theme="dark"]`에서 수정합니다. 기존 `--site-*`, `--wemos-*` 변수는 공통 값을 참조하므로 일반 화면과 Wemos 화면의 색상·글꼴을 일관되게 변경할 수 있습니다.
+
+새 스타일은 해당 구역의 기존 선택자에 추가하세요. 같은 선택자·속성을 파일 끝에 반복 선언하거나, 실제 화면에 없는 구형 클래스의 스타일을 추가하지 마세요. 동적 채널 카드는 `.active-wemos-channels .channel-card`, 장치 관리 버튼 묶음은 `.wemos-channel-table .button-group`을 사용합니다. 숨겨진 기존 정적 채널의 호환 스타일은 유지합니다.
+
+```bash
+npm run format:css
+npm run check:css
+npm test
+```
+
+`format:css`는 2칸 들여쓰기와 일관된 줄바꿈을 적용합니다. `check:css`는 CSS 형식·선택자 문법·동일 범위의 반복 규칙/속성·구형 스타일·공통 변수 연결을 검증합니다. 기존 화면을 유지하는 정리에서는 색상·크기·배치가 바뀌지 않도록 데스크톱·모바일, 밝은/어두운 테마 및 보기 모드도 함께 확인하세요.
+
 ## 환경변수
 
 ### 데이터베이스
@@ -182,7 +247,36 @@ MASTER_EMAIL=실제이메일@example.com
 
 ## 데이터베이스
 
-`factory` 데이터베이스가 없는 신규 환경에서 프로젝트의 `schema.sql`을 실행합니다. DB 생성 권한이 있는 계정으로 실행해야 하며, 데이터베이스 생성과 선택(`CREATE DATABASE factory`, `USE factory`)부터 회원·제품·개인 설정 및 Wemos 테이블과 초기 데이터 생성까지 한 번에 처리합니다. `Digital_input`, `Degital_output`을 포함한 모든 컬럼과 외래키는 처음부터 생성하며, 이후 `ALTER`로 추가하는 방식이 아닙니다. 이미 `factory`가 존재하면 오류가 발생하며, 기존 DB를 삭제하거나 덮어쓰지 않습니다.
+`factory` 데이터베이스가 없는 신규 환경에서 프로젝트의 `schema.sql`을 실행합니다. DB 생성 권한이 있는 계정으로 실행해야 하며, 데이터베이스 생성과 선택(`CREATE DATABASE factory`, `USE factory`)부터 회원·제품·개인 설정 및 Wemos 테이블과 초기 데이터 생성까지 한 번에 처리합니다. `input_signal`, `output_signal`을 포함한 모든 컬럼과 외래키는 처음부터 생성하며, 이후 `ALTER`로 추가하는 방식이 아닙니다. 이미 `factory`가 존재하면 오류가 발생하며, 기존 DB를 삭제하거나 덮어쓰지 않습니다.
+
+### DB 명명 규칙
+
+테이블과 컬럼은 소문자 `snake_case`를 사용합니다. 이미 의미가 분명한 `users`, `products`, `user_settings`와 해당 컬럼은 유지하며, Wemos의 논리 채널·명령·이력 이름을 다음과 같이 정리합니다.
+
+| 이전 테이블 | 현재 테이블 | 역할 |
+| --- | --- | --- |
+| `wemos_devices` | `wemos_devices` | 장치 ID·이름·인증·연결 정보 |
+| `wemos_contact_sets` | `wemos_channels` | 8채널 입력·출력 신호 및 상태 |
+| `wemos_device_commands` | `wemos_commands` | 출력 명령과 처리 상태 |
+| `wemos_lamp_state_history` | `wemos_state_history` | 채널 상태 변경 이력 |
+
+| 범위 | 이전 컬럼 | 현재 컬럼 |
+| --- | --- | --- |
+| 장치·채널 | `active` | `is_active` |
+| 채널 | `set_name` | `channel_name` |
+| 채널 | `Digital_input`, `input_pin` | `input_signal` |
+| 채널 | `Degital_output`, `output_pin` | `output_signal` |
+| 채널 | `current_state` | `output_state` |
+| 장치·채널 | `last_source` | `last_change_source` |
+| 채널 | `input_string`, `output_string` | `input_message`, `output_message` |
+| 명령·이력 | `pin_name` | `output_signal` |
+| 명령 | `desired_state` | `requested_output_state` |
+| 명령 | `output_string`, `requester`, `status`, `changed_at` | `output_message`, `requested_by`, `command_status`, `status_changed_at` |
+| 이력 | `previous_state`, `new_state`, `source`, `String` | `previous_output_state`, `output_state`, `change_source`, `signal_message` |
+
+장치 테이블의 기존 첫 4개 출력 호환 상태는 `os1_state`~`os4_state`, 대응 출처는 `os2_source`~`os4_source`로 명명합니다. 사용하지 않던 D7 호환 정보는 `legacy_d7_state`, `legacy_d7_source`로 보존합니다. 현재 8채널의 실제 상태는 `wemos_channels`를 기준으로 조회합니다.
+
+기존 DB는 서버 초기화 시 `migrateWemosSchemaNames()`가 테이블 및 컬럼 이름만 변경하여 데이터·컬럼 타입·인덱스·외래키를 보존합니다. 기존 이름과 새 이름이 동시에 존재하면 데이터 합치기나 삭제를 하지 않고 초기화를 중단합니다. 이름 변경에는 MySQL 8.0 이상 또는 MariaDB 10.5 이상이 필요하며, 배포 전 DB 백업과 테이블 변경 권한을 확인하세요. DB 이름과 별개인 기존 REST 경로·요청 필드 및 펌웨어 소켓 메시지 형식은 유지합니다.
 
 이미 운영 중인 DB라면 서버가 시작할 때 `users`, `products`, `user_settings`에 필요한 컬럼을 확인하고 부족한 부분을 자동으로 `ALTER TABLE`로 추가합니다(`server.js`의 `ensureSchema()`). 현재 주요 테이블은 다음과 같습니다.
 
@@ -225,6 +319,8 @@ MASTER_EMAIL=실제이메일@example.com
 - `display_mode`: 보기 모드 (`normal`, `compact`, `large`)
 - `show_summary`, `show_target`, `show_rate`: 현황판 요약/목표수량/달성률 카드 표시 여부
 - `show_updated_at`, `show_updated_by`: 현황판 표의 최종 변경일/변경자 열 표시 여부
+- `show_wemos_istr`, `show_wemos_ostr`: Wemos 제어·조회 화면의 채널별 IStr/OStr 표시 여부
+- `show_wemos_ostr_inputs`: Wemos 제어 화면의 채널별 ON/OFF OStr 입력란 표시 여부
 - `date_format`: 날짜 표시 방식 (`ko-KR`, `iso`)
 - `created_at`, `updated_at`: 생성일과 최종 변경일
 
@@ -297,6 +393,7 @@ MASTER_EMAIL=실제이메일@example.com
 - **알림 설정**: 알림음 사용 여부, 알림음 종류, 알림음 크기
 - **화면 설정**: 밝은 화면 / 어두운 화면, 일반 / 간결 / 크게 보기
 - **생산현황 표시 설정**: 요약 정보, 목표수량, 달성률, 최종 변경 날짜, 최종 변경자 표시 여부
+- **Wemos 표시 설정**: IStr 표시, OStr 표시, OStr 입력란 표시 여부. 기본값은 모두 표시이며, 조회 전용 화면에는 입력란이 생성되지 않습니다.
 - **날짜/시간 설정**: 한국식 날짜/시간 표시 여부
 
 알림음 종류/크기 조절 UI는 현황판(`index.html`)이 아닌 `/settings.html`에서만 제공됩니다.
@@ -306,6 +403,7 @@ MASTER_EMAIL=실제이메일@example.com
 - 설정은 브라우저 `localStorage`가 아니라 회원 계정과 연결된 `user_settings` 테이블에 저장됩니다.
 - 로그인하면 서버에서 본인의 설정을 조회하여 현황판(`index.html`)에 자동으로 적용합니다. 다른 PC나 브라우저에서 로그인해도 동일하게 복원됩니다.
 - 설정을 저장하면 현재 화면(테마, 알림음 등)에도 즉시 반영됩니다.
+- Wemos 문자열 표시 설정은 회원별 DB에 저장되며 두 Wemos 화면의 모든 채널에 적용됩니다. 이미 열려 있는 Wemos 화면으로 돌아오거나 뒤로가기 캐시가 복원되면 서버 설정을 다시 조회합니다. 숨겨진 문자열도 최신 값으로 갱신되며 표시 여부가 소켓 통신·ON/OFF 제어를 변경하지는 않습니다.
 - `GET /api/me/settings`, `PUT /api/me/settings` API는 항상 로그인 세션의 회원 ID를 기준으로 동작하며, 요청 본문에 다른 회원 ID를 넣어도 무시됩니다.
 - 서버는 허용된 값(알림음 종류, 테마, 보기 모드, 0~100 범위의 볼륨, boolean 값)만 저장하며 잘못된 값은 `400` 오류로 거부합니다.
 - 생산현황 데이터(WebSocket 브로드캐스트)는 기존과 동일하게 모든 접속자에게 공유되지만, 개인 설정은 본인에게만 적용되고 다른 회원에게 전달되지 않습니다.
@@ -385,7 +483,7 @@ py -m platformio device monitor --port COM6 --baud 115200
 | 8 | IS8 | OS8 | IStr8 | OStr8 |
 
 Wemos의 `state` 메시지는 `OutputSignal=OS1~OS8`, `OutputState`, `InputSignal=IS1~IS8`, `inputState`, `IStr`, `OStr`, `source`, `ip`를 포함합니다. 신호 이름은 채널 식별자이고 `OutputState`가 실제 출력의 `ON`/`OFF` 값입니다.
-서버는 `wemos_contact_sets`에 채널 이름(`Digital_input`, `Degital_output`), 입력 상태(`input_state`)와 출력 상태(`current_state`), 문자열(`input_string`, `output_string`)을 각각 저장하고 브라우저에 WebSocket으로 전달합니다. 마지막 장치 IP는 `wemos_devices.last_ip`에 저장합니다.
+서버는 `wemos_channels`에 채널 이름(`channel_name`)과 신호 식별자(`input_signal`, `output_signal`), 입력 상태(`input_state`)와 출력 상태(`output_state`), 문자열(`input_message`, `output_message`)을 각각 저장하고 브라우저에 WebSocket으로 전달합니다. 마지막 장치 IP는 `wemos_devices.last_ip`에 저장합니다.
 
 ### 입력 및 웹 제어 흐름
 
@@ -395,7 +493,7 @@ Wemos의 `state` 메시지는 `OutputSignal=OS1~OS8`, `OutputState`, `InputSigna
 - **웹 화면 반영**: 서버가 디바이스의 `OutputState`를 DB에 저장하고 상태 이벤트로 전달하면 현재 OS 표시와 ON/OFF 버튼 색상·선택 상태가 변경됩니다. 요청 저장·전달 알림만으로는 실제 상태를 변경하지 않습니다.
 - **우선순위**: 마지막으로 처리된 입력 변화 또는 웹 명령이 출력에 적용됩니다. 웹 제어는 IS 입력값을 바꾸지 않으며, 이후 입력이 다시 변하면 입력값이 출력을 갱신합니다.
 
-DB 및 조회 API의 입력·출력 채널 필드는 `Digital_input`, `Degital_output`을 사용합니다. 기존 DB의 `input_pin`, `output_pin`은 서버 재시작 시 데이터와 인덱스를 유지하면서 자동으로 이름을 변경합니다. WebSocket 송신은 Wemos·서버·브라우저 모두 `InputSignal`, `OutputSignal`을 사용합니다. 서버는 이전 펌웨어 및 브라우저의 `inputPin`, `pin`을 수신 호환용으로만 허용하며, 새 메시지에는 이전 필드를 넣지 않습니다. 이력·명령 테이블의 `pin_name`은 기존 데이터 저장 컬럼명으로 유지합니다.
+DB 및 조회 API의 입력·출력 채널 필드는 `input_signal`, `output_signal`을 사용합니다. 기존 DB의 다른 이름은 서버 재시작 시 데이터와 인덱스를 유지하면서 자동으로 변경합니다. WebSocket 송신은 Wemos·서버·브라우저 모두 `InputSignal`, `OutputSignal`을 사용합니다. 서버는 이전 펌웨어 및 브라우저의 `inputPin`, `pin`을 수신 호환용으로만 허용하며, 새 메시지에는 이전 필드를 넣지 않습니다. 이력·명령 테이블의 신호 식별자도 `output_signal`로 통일합니다.
 
 ### 장치 → 서버 메시지
 
@@ -411,7 +509,7 @@ DB 및 조회 API의 입력·출력 채널 필드는 `Digital_input`, `Degital_o
 
 ### 서버 → 장치 명령
 
-최근 상태 변경 표는 시간·장치·변수·현재 상태·문자열·출처를 표시합니다. `wemos_lamp_state_history`의 단일 `String` 컬럼에 디바이스 입력 변경이면 `IStr` 값을, 웹 명령 변경이면 `OStr` 값을 저장하고, 목록에는 접두어 없이 저장된 문자열 그대로 표시합니다. `string_type` 컬럼은 사용하지 않습니다. 이후 채널 문자열이 바뀌어도 과거 이력은 유지됩니다. 기존 DB는 서버 재시작 시 필요한 문자열 이관을 마친 뒤 이전 `input_string`/`output_string` 및 `string_type` 컬럼을 제거하며, 이미 저장된 `String` 값은 유지합니다. 각 채널의 현재 송수신 문자열을 보관하는 `wemos_contact_sets`와 명령 테이블은 그대로 유지합니다. 문자열이 저장되지 않았던 과거 이력은 `-`로 표시합니다. 출력 상태가 바뀌지 않은 문자열 전송만으로 별도의 상태 변경 이력을 만들지는 않습니다.
+최근 상태 변경 표는 시간·장치·변수·현재 상태·문자열·출처를 표시합니다. `wemos_state_history`의 단일 `signal_message` 컬럼에 디바이스 입력 변경이면 `IStr` 값을, 웹 명령 변경이면 `OStr` 값을 저장하고, 목록에는 접두어 없이 저장된 문자열 그대로 표시합니다. `string_type` 컬럼은 사용하지 않습니다. 이후 채널 문자열이 바뀌어도 과거 이력은 유지됩니다. 기존 DB는 서버 재시작 시 필요한 문자열 이관과 이름 변경을 수행하며, 이미 저장된 메시지는 유지합니다. 각 채널의 현재 송수신 문자열은 `wemos_channels.input_message`, `output_message`에 보관합니다. 문자열이 저장되지 않았던 과거 이력은 `-`로 표시합니다. 출력 상태가 바뀌지 않은 문자열 전송만으로 별도의 상태 변경 이력을 만들지는 않습니다.
 
 브라우저에서 출력 제어를 하면 서버는 다음 형식으로 Wemos에 명령을 전송합니다.
 서버 → 장치 `command` 메시지의 출력 문자열은 `OStr` 하나로만 전송하며, 중복 필드 `receiveString`, `outputString`은 포함하지 않습니다. 기존 펌웨어의 수신 호환 처리와 브라우저 알림·명령 이력의 데이터 형식은 유지합니다.

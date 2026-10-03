@@ -4,9 +4,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Wemos D1 R1 - 장치 관리</title>
-  <link rel="stylesheet" href="/style.css?v=20260930-1">
-  <script src="/page-settings.js?v=20260929-1" defer></script>
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="/style.css?v=20261003-1">
+  <script src="/page-settings.js?v=20261003-1" defer></script>
   <script src="/logout.js?v=20260930-1" defer></script>
 </head>
 
@@ -14,25 +14,17 @@
   <main class="wemos-shell">
     <header class="wemos-header">
       <div class="wemos-heading">
-        <p class="wemos-eyebrow">WEMOS D1 R1 <span>·</span> DEVICE ADMINISTRATION</p>
+        <p class="wemos-eyebrow"><span>·</span></p>
         <h1>장치 관리</h1>
       </div>
       <nav class="wemos-page-links" aria-label="Wemos 페이지">
         <a class="link" href="/">현황판</a>
-        <a class="link" href="/wemos.html">접점 제어</a>
-        <a class="link" href="/wemos-view.html">상태 조회</a>
+        <a class="link" href="/wemos.html">wemos 제어</a>
+        <a class="link" href="/wemos-view.html">wemos 보기</a>
         <button class="logout-button" onclick="logout()">로그아웃</button>
 
       </nav>
     </header>
-
-    <section class="wemos-statusbar" aria-label="관리 상태">
-      <div class="status-item"><span class="status-label">접속 계정</span><b id="user" class="status-detail">확인 중</b></div>
-      <div class="status-item"><span class="status-label">권한</span><b id="permission" class="status-detail">확인 중</b>
-      </div>
-      <div class="status-item"><span class="status-label">등록 장치</span><b id="deviceCount" class="status-detail">0대</b>
-      </div>
-    </section>
 
     <section class="history-section wemos-admin-section" aria-labelledby="device-title">
       <div class="section-heading">
@@ -65,7 +57,7 @@
         <div class="wemos-admin-block wemos-list-block">
           <div class="admin-block-heading"><span class="admin-block-index">02</span>
             <div>
-              <h3>등록 장치</h3>
+              <div class="admin-device-title"><h3>등록 장치</h3><span id="deviceCount" class="admin-device-count">0대</span></div>
               <p>편집 버튼을 누르면 장치와 채널 설정이 펼쳐집니다. 드래그하여 배열 순서를 정하세요.</p>
             </div>
           </div>

@@ -4,9 +4,9 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title>Wemos D1 R1 - Device Control</title>
-	<link rel="stylesheet" href="/style.css?v=20260930-1">
-	<script src="/page-settings.js?v=20260928-1" defer></script>
+	<title>KIMS FACTORIES V1.0</title>
+	<link rel="stylesheet" href="/style.css?v=20261003-1">
+	<script src="/page-settings.js?v=20261003-1" defer></script>
 	<script src="/logout.js?v=20260930-1" defer></script>
 </head>
 
@@ -14,28 +14,18 @@
 	<main class="wemos-shell">
 		<header class="wemos-header">
 			<div class="wemos-heading">
-				<p class="wemos-eyebrow">WEMOS D1 R1 <span>·</span> OUTPUT CONTROL</p>
-				<h1>Device Control</h1>
+				<p class="wemos-eyebrow"><span>·</span></p>
+				<h1>장치 제어</h1>
 			</div>
 			<nav class="wemos-page-links" aria-label="Wemos 페이지">
 				<!-- <a class="wemos-dashboard-link" href="/">현황판</a> -->
 				<a class="link" href="/">현황판</a>
-				<a class="link" href="/wemos-view.html">상태 조회</a>
-				<a id="wemosAdminLink" class="link" href="/wemos-admin.html">장치 관리</a>
+				<a class="link" href="/wemos-view.html">wemos 보기</a>
+				<a id="wemosAdminLink" class="link" href="/wemos-admin.html">Wemos 관리</a>
 				<button class="logout-button" onclick="logout()">로그아웃</button>
 
 			</nav>
 		</header>
-
-		<section class="wemos-statusbar" aria-label="장치 연결 정보">
-			<div class="status-item"><span class="status-label">서버 연결</span><b id="server" class="connection-value">연결
-					중</b></div>
-			<div class="status-item"><span class="status-label">접속 계정</span><b id="user" class="status-detail">확인 중</b>
-			</div>
-			<div class="status-item"><span class="status-label">권한</span><b id="permission" class="status-detail">확인
-					중</b></div>
-		</section>
-
 		<section class="channel-section" aria-labelledby="channel-title">
 			<div class="section-heading">
 				<div>

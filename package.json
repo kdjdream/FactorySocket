@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "format:css": "prettier public/style.css --write --tab-width 2 --print-width 100",
+    "check:css": "prettier public/style.css --check --tab-width 2 --print-width 100 && node --test test/css-structure.test.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
@@ -13,5 +15,10 @@
     "mariadb": "^3.4.5",
     "mysql2": "^3.14.0",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "postcss": "^8.5.28",
+    "postcss-selector-parser": "^7.1.6",
+    "prettier": "^3.9.9"
   }
 }

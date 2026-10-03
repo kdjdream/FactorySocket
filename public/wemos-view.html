@@ -4,9 +4,9 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title>Wemos D1 R1 - 접점 상태 조회</title>
-	<link rel="stylesheet" href="/style.css?v=20260930-1">
-	<script src="/page-settings.js?v=20260928-1" defer></script>
+	<title>KIMS FACTORIES V1.0</title>
+	<link rel="stylesheet" href="/style.css?v=20261003-1">
+	<script src="/page-settings.js?v=20261003-1" defer></script>
 	<script src="/logout.js?v=20260930-1" defer></script>
 </head>
 
@@ -14,32 +14,24 @@
 	<main class="wemos-shell">
 		<header class="wemos-header">
 			<div class="wemos-heading">
-				<p class="wemos-eyebrow">WEMOS D1 R1 <span>·</span> OUTPUT MONITOR</p>
-				<h1>접점 상태 조회</h1>
+				<p class="wemos-eyebrow"><span>·</span></p>
+				<h1>장치 보기</h1>
 			</div>
 			<nav class="wemos-page-links" aria-label="Wemos 페이지">
 				<a class="link" href="/">현황판</a>
-				<a id="controlLink" class="link" href="/wemos.html" hidden>접점 제어</a>
-				<a class="link" href="/wemos-admin.html">장치 관리</a>
+				<a id="controlLink" class="link" href="/wemos.html" >Wemos 제어</a>
+	
+				<a class="link" href="/wemos-admin.html">Wemos 관리</a>
 				<button class="logout-button" onclick="logout()">로그아웃</button>
 			</nav>
 		</header>
-
-		<section class="wemos-statusbar" aria-label="장치 연결 정보">
-			<div class="status-item"><span class="status-label">서버 연결</span><b id="server" class="connection-value">연결
-					중</b></div>
-			<div class="status-item"><span class="status-label">접속 계정</span><b id="user" class="status-detail">확인 중</b>
-			</div>
-			<div class="status-item"><span class="status-label">권한</span><b id="permission" class="status-detail">확인
-					중</b></div>
-		</section>
-
 		<section class="channel-section" aria-labelledby="channel-title">
 			<div class="section-heading">
 				<div>
-					<p class="wemos-eyebrow">OUTPUT MONITOR</p>
-					<h2 id="channel-title">핀별 상태</h2>
+					<p class="wemos-eyebrow">CONTROL CHANNELS</p>
+					<h2 id="channel-title">Device Control</h2>
 				</div>
+				<p class="section-note">IS는 디바이스 입력 변수(bool), OS는 디바이스 출력 변수(Bool)입니다. </p>
 			</div>
 			<div class="channel-grid" hidden>
 				<article class="channel-card channel-d8">

@@ -1,7 +1,8 @@
 const DEFAULT_SETTINGS = {
   sound_type: "bell", sound_volume: 50, sound_enabled: true, theme: "light",
   display_mode: "normal", show_summary: true, show_target: true, show_rate: true,
-  show_updated_at: true, show_updated_by: true, date_format: "ko-KR"
+  show_updated_at: true, show_updated_by: true, date_format: "ko-KR",
+  show_wemos_istr: true, show_wemos_ostr: true, show_wemos_ostr_inputs: true
 };
 
 function redirectToLogin() {
@@ -32,6 +33,9 @@ function applySettingsToForm(settings) {
   document.getElementById("showRate").checked = !!settings.show_rate;
   document.getElementById("showUpdatedAt").checked = !!settings.show_updated_at;
   document.getElementById("showUpdatedBy").checked = !!settings.show_updated_by;
+  document.getElementById("showWemosIstr").checked = settings.show_wemos_istr !== false;
+  document.getElementById("showWemosOstr").checked = settings.show_wemos_ostr !== false;
+  document.getElementById("showWemosOstrInputs").checked = settings.show_wemos_ostr_inputs !== false;
   document.getElementById("dateFormatKo").checked = settings.date_format === "ko-KR";
 }
 
@@ -57,6 +61,9 @@ function readSettingsFromForm() {
     show_rate: document.getElementById("showRate").checked,
     show_updated_at: document.getElementById("showUpdatedAt").checked,
     show_updated_by: document.getElementById("showUpdatedBy").checked,
+    show_wemos_istr: document.getElementById("showWemosIstr").checked,
+    show_wemos_ostr: document.getElementById("showWemosOstr").checked,
+    show_wemos_ostr_inputs: document.getElementById("showWemosOstrInputs").checked,
     date_format: document.getElementById("dateFormatKo").checked ? "ko-KR" : "iso"
   };
 }

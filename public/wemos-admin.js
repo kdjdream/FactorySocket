@@ -9,6 +9,42 @@ function escapeHtml(value) {
 function setMessage(text) { $("adminMessage").textContent = text || ""; }
 function findDevice(deviceId) { return devices.find(device => device.device_id === deviceId); }
 
+async function copyDeviceToken(token) {
+  if (typeof token !== "string" || !token) return false;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(token);
+      return true;
+    }
+  } catch {}
+
+  const previousFocus = document.activeElement;
+  const selection = document.getSelection?.();
+  const ranges = selection ? Array.from({ length: selection.rangeCount }, (_, index) => selection.getRangeAt(index).cloneRange()) : [];
+  const input = document.createElement("textarea");
+  input.value = token;
+  input.readOnly = true;
+  input.style.position = "fixed";
+  input.style.left = "-9999px";
+  input.style.top = "0";
+  document.body.appendChild(input);
+  try {
+    input.focus({ preventScroll: true });
+    input.select();
+    input.setSelectionRange(0, token.length);
+    return document.execCommand?.("copy") === true;
+  } catch {
+    return false;
+  } finally {
+    input.remove();
+    previousFocus?.focus({ preventScroll: true });
+    if (selection) {
+      selection.removeAllRanges();
+      ranges.forEach(range => selection.addRange(range));
+    }
+  }
+}
+
 function renderRows() {
   const rows = $("deviceRows");
   if (!devices.length) {
@@ -20,7 +56,7 @@ function renderRows() {
     return `<tr class="device-row ${expanded ? "is-expanded" : ""}" draggable="true" data-device-row="${escapeHtml(device.device_id)}">
       <td><code>${escapeHtml(device.device_id)}</code></td>
       <td><strong>${escapeHtml(device.device_name)}</strong></td>
-      <td><span class="device-state ${device.active ? "is-active" : "is-inactive"}">${device.active ? "활성" : "비활성"}</span></td>
+      <td><span class="device-state ${device.is_active ? "is-active" : "is-inactive"}">${device.is_active ? "활성" : "비활성"}</span></td>
       <td><button class="output-button admin-submit" type="button" data-edit-device="${escapeHtml(device.device_id)}">${expanded ? "편집 닫기" : "편집"}</button></td>
     </tr>${expanded ? renderEditor(device) : ""}`;
   }).join("");
@@ -32,16 +68,16 @@ function renderEditor(device) {
     <form class="device-editor-form" data-device-form="${escapeHtml(device.device_id)}">
       <label>장치 이름<input name="deviceName" required maxlength="100" style="padding: 10px 12px; font-size: 14px;" value="${escapeHtml(device.device_name)}"></label>
       <button class="output-button admin-submit" type="submit">장치 이름 저장</button>
-      <button class="output-button ${device.active ? "admin-danger" : "admin-submit"}" type="button" data-toggle-device="${escapeHtml(device.device_id)}">${device.active ? "장치 비활성화" : "장치 활성화"}</button>
+      <button class="output-button ${device.is_active ? "admin-danger" : "admin-submit"}" type="button" data-toggle-device="${escapeHtml(device.device_id)}">${device.is_active ? "장치 비활성화" : "장치 활성화"}</button>
       <button class="output-button admin-danger" type="button" data-delete-device="${escapeHtml(device.device_id)}">장치 삭제</button>
     </form>
     <div class="channel-editor-heading"><h3>채널 이름 및 상태</h3><p>IS는 입력 신호, OS는 출력 신호를 나타냅니다.</p></div>
     <div class="table-wrap"><table class="wemos-channel-table"><thead><tr><th>IS</th><th>OS</th><th>IStr</th><th>OStr</th><th>채널 이름</th><th>상태</th><th>저장</th></tr></thead><tbody>${sets.map(set => `<tr>
       <td><code>${escapeHtml(set.input_signal)}</code></td><td><code>${escapeHtml(set.output_signal)}</code></td>
-      <td><code>${escapeHtml(set.input_string || "")}</code></td><td><code>${escapeHtml(set.output_string || "")}</code></td>
-      <td><input aria-label="${escapeHtml(set.output_signal)} 채널 이름" data-channel-name="${set.id}" value="${escapeHtml(set.set_name)}" maxlength="50" style="padding: 10px 12px; font-size: 14px;" ></td>
-      <td><span class="device-state ${set.active ? "is-active" : "is-inactive"}">${set.active ? "활성" : "비활성"}</span></td>
-      <td><div class="button-group"><button class="output-button ${set.active ? "admin-danger" : "admin-submit"}" type="button" data-toggle-channel="${set.id}" data-device-id="${escapeHtml(device.device_id)}" data-active="${set.active ? "false" : "true"}">${set.active ? "비활성화" : "활성화"}</button><button class="output-button admin-submit" type="button" data-save-channel="${set.id}" data-device-id="${escapeHtml(device.device_id)}">이름 저장</button></div></td>
+      <td><code>${escapeHtml(set.input_message || "")}</code></td><td><code>${escapeHtml(set.output_message || "")}</code></td>
+      <td><input aria-label="${escapeHtml(set.output_signal)} 채널 이름" data-channel-name="${set.id}" value="${escapeHtml(set.channel_name)}" maxlength="50" style="padding: 10px 12px; font-size: 14px;" ></td>
+      <td><span class="device-state ${set.is_active ? "is-active" : "is-inactive"}">${set.is_active ? "활성" : "비활성"}</span></td>
+      <td><div class="button-group"><button class="output-button ${set.is_active ? "admin-danger" : "admin-submit"}" type="button" data-toggle-channel="${set.id}" data-device-id="${escapeHtml(device.device_id)}" data-active="${set.is_active ? "false" : "true"}">${set.is_active ? "비활성화" : "활성화"}</button><button class="output-button admin-submit" type="button" data-save-channel="${set.id}" data-device-id="${escapeHtml(device.device_id)}">이름 저장</button></div></td>
     </tr>`).join("")}</tbody></table></div>
   </div></td></tr>`;
 }
@@ -90,16 +126,30 @@ $("deviceForm").addEventListener("submit", async event => {
   tokenLabel.textContent = "장치 토큰";
   const tokenValue = document.createElement("code");
   tokenValue.textContent = data.deviceToken;
+  tokenValue.style.userSelect = "all";
   const copyButton = document.createElement("button");
   copyButton.type = "button";
   copyButton.className = "output-button admin-submit";
   copyButton.textContent = "토큰 복사";
   copyButton.addEventListener("click", async () => {
+    copyButton.disabled = true;
     try {
-      await navigator.clipboard.writeText(data.deviceToken);
-      copyButton.textContent = "복사됨";
-    } catch {
-      copyButton.textContent = "복사 실패";
+      const copied = await copyDeviceToken(data.deviceToken);
+      copyButton.textContent = copied ? "복사됨" : "복사 실패";
+      if (copied) {
+        $("deviceMessage").textContent = "장치 토큰이 복사되었습니다.";
+      } else {
+        const selection = document.getSelection?.();
+        if (selection) {
+          const range = document.createRange();
+          range.selectNodeContents(tokenValue);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        $("deviceMessage").textContent = "브라우저에서 자동 복사를 허용하지 않습니다.";
+      }
+    } finally {
+      copyButton.disabled = false;
     }
   });
   tokenResult.append(tokenLabel, tokenValue, copyButton);
@@ -112,8 +162,8 @@ $("deviceRows").addEventListener("click", async event => {
   const toggleDevice = event.target.closest("[data-toggle-device]");
   if (toggleDevice) {
     const device = findDevice(toggleDevice.dataset.toggleDevice);
-    if (!device || !confirm(`장치를 ${device.active ? "비활성화" : "활성화"}할까요?`)) return;
-    if (await updateDevice(device.device_id, { deviceName: device.device_name, active: !device.active })) { await loadDevices(); expandedDeviceId = device.device_id; renderRows(); }
+    if (!device || !confirm(`장치를 ${device.is_active ? "비활성화" : "활성화"}할까요?`)) return;
+    if (await updateDevice(device.device_id, { deviceName: device.device_name, active: !device.is_active })) { await loadDevices(); expandedDeviceId = device.device_id; renderRows(); }
     return;
   }
   const deleteDevice = event.target.closest("[data-delete-device]");
@@ -134,7 +184,7 @@ $("deviceRows").addEventListener("click", async event => {
   const set = findDevice(deviceId)?.sets.find(item => String(item.id) === (button.dataset.saveChannel || button.dataset.toggleChannel));
   if (!set) return;
   const nameInput = document.querySelector(`[data-channel-name="${set.id}"]`);
-  const body = { setName: toggleChannel ? set.set_name : nameInput.value.trim(), active: toggleChannel ? button.dataset.active === "true" : Boolean(set.active) };
+  const body = { setName: toggleChannel ? set.channel_name : nameInput.value.trim(), active: toggleChannel ? button.dataset.active === "true" : Boolean(set.is_active) };
   const response = await fetch(`/api/admin/wemos/devices/${encodeURIComponent(deviceId)}/contact-sets/${set.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
   setMessage(response.ok ? "채널 설정을 저장했습니다." : data.error || "채널 설정을 저장하지 못했습니다.");
@@ -184,8 +234,6 @@ $("deviceRows").addEventListener("submit", async event => {
   if (!response.ok) { location.href = "/login.html"; return; }
   const data = await response.json();
   const level = Number(data.user.permissionLevel || data.user.permission_level || 1);
-  if (level < 6 || data.user.status !== "APPROVED") { location.href = "/profile.html"; return; }
-  $("user").textContent = `${data.user.name} (${data.user.username})`;
-  $("permission").textContent = `${level}등급`;
+  if (level < 8 || data.user.status !== "APPROVED") { location.href = "/profile.html"; return; }
   await loadDevices();
 })();

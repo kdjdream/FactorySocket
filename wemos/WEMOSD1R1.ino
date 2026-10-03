@@ -10,13 +10,13 @@ const char *WIFI_PASSWORD = "";
 
 // WSS 배포 설정 예시: 호스트에는 프로토콜이나 경로를 넣지 않습니다.
 // TLS 사용 시 서버 인증서 검증 정책은 별도로 확인해야 합니다.
-// const char *SERVER_HOST = "YOUR_CLOUDTYPE_HOST";
-// const uint16_t SERVER_PORT = 443;
-// const bool SERVER_USE_TLS = true;
+const char *SERVER_HOST = "port-0-factorysocket-mu479jw776550ef8.sel3.cloudtype.app";
+const uint16_t SERVER_PORT = 443;
+const bool SERVER_USE_TLS = true;
 
-const char *SERVER_HOST = "10.20.36.156";
-const uint16_t SERVER_PORT = 8080;
-const bool SERVER_USE_TLS = false;
+// const char *SERVER_HOST = "10.20.36.156";
+// const uint16_t SERVER_PORT = 8080;
+// const bool SERVER_USE_TLS = false;
 
 // 서버에 등록한 장치 ID와 발급된 토큰을 사용합니다. 토큰은 로그나 공개 저장소에 노출하지 마세요.
 const char *DEVICE_ID = "WEMOS-D1-001";
@@ -127,6 +127,11 @@ struct ControlChannel
     String pendingStateSource;     // 다음 상태 보고의 출처: WEMOS 또는 CLIENT
     String lastProcessedCommandId; // 이 채널에서 마지막으로 처리한 명령 ID
     bool severSignal = false;
+    bool statusLogInitialized = false;
+    bool lastLoggedInputState = false;
+    bool lastLoggedOutputState = false;
+    bool lastLoggedServerSignal = false;
+    String lastLoggedSource = "";
 };
 
 // ---- 8채널 매핑: 각 행은 같은 번호의 입력·출력·문자열 변수를 연결합니다. ----
@@ -187,21 +192,36 @@ void printOutputStatus(
     const String &source);
 
 /**
- * 채널의 현재 입력·출력과 변경 출처를 시리얼로 표시합니다.
- * 조회만 수행하며 상태 변경이나 네트워크 전송은 하지 않습니다.
+ * 채널의 입력·출력·요청·출처가 달라진 경우에만 상태를 한 줄로 표시합니다.
+ * 로그용 캐시만 갱신하며 실제 상태나 소켓 전송에는 영향을 주지 않습니다.
  */
 void printOutputStatus(
     ControlChannel &channel,
     const String &source)
 {
-    Serial.print("[STATUS] InputSignal=");
+    if (channel.statusLogInitialized &&
+        channel.lastLoggedInputState == channel.inputState &&
+        channel.lastLoggedOutputState == channel.outputState &&
+        channel.lastLoggedServerSignal == channel.severSignal &&
+        channel.lastLoggedSource == source)
+    {
+        return;
+    }
+
+    channel.statusLogInitialized = true;
+    channel.lastLoggedInputState = channel.inputState;
+    channel.lastLoggedOutputState = channel.outputState;
+    channel.lastLoggedServerSignal = channel.severSignal;
+    channel.lastLoggedSource = source;
+
+    Serial.print("[STATUS] ");
     Serial.print(channel.inputSignal);
-    Serial.print(" inputState=");
+    Serial.print("=");
     Serial.print(channel.inputState ? "ON" : "OFF");
 
-    Serial.print(" | OutputSignal=");
+    Serial.print(" | ");
     Serial.print(channel.outputSignal);
-    Serial.print(" OutputState=");
+    Serial.print("=");
     Serial.print(channel.outputState ? "ON" : "OFF");
     Serial.print(" | severSignal=");
     Serial.print(channel.severSignal ? "ON" : "OFF");
@@ -460,16 +480,7 @@ void sendStateReport(
 
     webSocket.sendTXT(payload);
 
-    Serial.print("[STATE TX] OutputSignal=");
-    Serial.print(channel.outputSignal);
-    Serial.print(" OutputState=");
-    Serial.print(channel.outputState ? "ON" : "OFF");
-    Serial.print(" | InputSignal=");
-    Serial.print(channel.inputSignal);
-    Serial.print(" inputState=");
-    Serial.print(channel.inputState ? "ON" : "OFF");
-    Serial.print(" | source=");
-    Serial.println(source);
+    printOutputStatus(channel, source);
 }
 
 /**
@@ -545,14 +556,15 @@ void sendAck(
 
     webSocket.sendTXT(payload);
 
-    Serial.print("[ACK TX] commandId=");
-    Serial.print(commandId);
-    Serial.print(" | OutputSignal=");
-    Serial.print(channel.outputSignal);
-    Serial.print(" OutputState=");
-    Serial.print(stateValue);
-    Serial.print(" | success=");
-    Serial.println(success ? "true" : "false");
+    if (!success)
+    {
+        Serial.print("[ACK TX] Failed | commandId=");
+        Serial.print(commandId);
+        Serial.print(" | ");
+        Serial.print(channel.outputSignal);
+        Serial.print("=");
+        Serial.println(stateValue);
+    }
 }
 
 /**
@@ -572,34 +584,12 @@ void applyOutputState(
     if (channel.outputState ==
         desiredState)
     {
+        printOutputStatus(channel, source);
         return;
     }
 
-    bool previousState =
-        channel.outputState;
-
     channel.outputState =
         desiredState;
-
-    Serial.print("[OUTPUT] OutputSignal=");
-    Serial.print(channel.outputSignal);
-    Serial.print(" | OutputState=");
-
-    Serial.print(
-        previousState
-            ? "ON"
-            : "OFF");
-
-    Serial.print(" -> ");
-
-    Serial.print(
-        channel.outputState
-            ? "ON"
-            : "OFF");
-
-    Serial.print(" | source=");
-
-    Serial.println(source);
 
     printOutputStatus(
         channel,
@@ -663,10 +653,6 @@ void applyRemoteCommand(JsonObject command)
     if (receivedString.length() > 0)
     {
         channel->outputString = receivedString;
-        Serial.print("[STRING RX] OStr");
-        Serial.print(channel->outputSignal + 2);
-        Serial.print("=");
-        Serial.println(channel->outputString);
     }
 
     String requestedState =
@@ -694,14 +680,6 @@ void applyRemoteCommand(JsonObject command)
     if (commandId ==
         channel->lastProcessedCommandId)
     {
-        Serial.print(
-            "[CMD RX] Duplicate | commandId=");
-        Serial.print(commandId);
-        Serial.print(" | OutputSignal=");
-        Serial.print(channel->outputSignal);
-        Serial.print(" | actual OutputState=");
-        Serial.println(channel->outputState ? "ON" : "OFF");
-
         sendAck(
             *channel,
             commandId,
@@ -711,13 +689,6 @@ void applyRemoteCommand(JsonObject command)
 
         return;
     }
-
-    Serial.print("[CMD RX] commandId=");
-    Serial.print(commandId);
-    Serial.print(" | OutputSignal=");
-    Serial.print(channel->outputSignal);
-    Serial.print(" | severSignal=");
-    Serial.println(requestedState);
 
     // 해당 OS1~OS8을 변경하고 CLIENT 출처의 보고를 예약한 뒤 ACK를 먼저 전송합니다.
     applyOutputState(
@@ -734,12 +705,22 @@ void applyRemoteCommand(JsonObject command)
     channel->lastProcessedCommandId =
         commandId;
 
-    Serial.print("[CMD RX] Applied | commandId=");
+    Serial.print("[CMD] commandId=");
     Serial.print(commandId);
-    Serial.print(" | OutputSignal=");
+    Serial.print(" | ");
     Serial.print(channel->outputSignal);
-    Serial.print(" OutputState=");
-    Serial.println(channel->outputState ? "ON" : "OFF");
+    Serial.print("=");
+    Serial.print(channel->outputState ? "ON" : "OFF");
+    Serial.print(" | severSignal=");
+    Serial.print(requestedState);
+    if (receivedString.length() > 0)
+    {
+        Serial.print(" | OStr");
+        Serial.print(channel->outputSignal + 2);
+        Serial.print("=");
+        Serial.print(channel->outputString);
+    }
+    Serial.println();
 }
 
 /**
@@ -872,19 +853,6 @@ void handleInputSignal(
             channel.debouncedInput =
                 currentInput;
 
-            Serial.print(
-                "[INPUT] InputSignal=");
-
-            Serial.print(
-                channel.inputSignal);
-
-            Serial.print(" | debounced inputState=");
-
-            Serial.println(
-                currentInput
-                    ? "ON"
-                    : "OFF");
-
             applyOutputState(
                 channel,
                 currentInput,
@@ -926,16 +894,11 @@ void setup()
 
     delay(200);
 
-    Serial.println();
-    Serial.println();
-    Serial.println(
-        "================================");
-
-    Serial.println(
-        " Wemos D1 R1 IS/OS Controller");
-
-    Serial.println(
-        "================================");
+    Serial.print("[BOOT] Wemos D1 R1 | deviceId=");
+    Serial.print(DEVICE_ID);
+    Serial.print(" | channels=");
+    Serial.print(CHANNEL_COUNT);
+    Serial.println(" | baud=115200");
 
     // 1~4채널을 명시적으로 OFF로 재설정합니다. 5~8채널은 전역 초기값 OFF를 유지합니다.
     IS1 = false;
@@ -967,36 +930,7 @@ void setup()
         channel.pendingStateSource =
             "WEMOS";
 
-        Serial.print(
-            "[BOOT] InputSignal=");
-
-        Serial.print(
-            channel.inputSignal);
-
-        Serial.print(" inputState=");
-
-        Serial.print(
-            channel.inputState
-                ? "ON"
-                : "OFF");
-
-        Serial.print(" | OutputSignal=");
-
-        Serial.print(
-            channel.outputSignal);
-
-        Serial.print(" OutputState=");
-
-        Serial.println(
-            channel.outputState
-                ? "ON"
-                : "OFF");
     }
-
-    Serial.print(
-        "[BOOT] deviceId=");
-
-    Serial.println(DEVICE_ID);
 
     // Wi-Fi 설정의 플래시 반복 저장을 끄고 STA 모드와 자동 재연결을 설정합니다.
     WiFi.persistent(false);

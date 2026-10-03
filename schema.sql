@@ -56,6 +56,9 @@ CREATE TABLE user_settings (
   show_rate TINYINT(1) NOT NULL DEFAULT 1,
   show_updated_at TINYINT(1) NOT NULL DEFAULT 1,
   show_updated_by TINYINT(1) NOT NULL DEFAULT 1,
+  show_wemos_istr TINYINT(1) NOT NULL DEFAULT 1,
+  show_wemos_ostr TINYINT(1) NOT NULL DEFAULT 1,
+  show_wemos_ostr_inputs TINYINT(1) NOT NULL DEFAULT 1,
   date_format VARCHAR(10) NOT NULL DEFAULT 'ko-KR',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -73,44 +76,44 @@ VALUES
 
 CREATE TABLE wemos_devices (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, device_id VARCHAR(100) NOT NULL,
- device_name VARCHAR(100) NOT NULL DEFAULT '', token_hash CHAR(64) NULL, active TINYINT(1) NOT NULL DEFAULT 1, sort_order INT NOT NULL DEFAULT 0,
- current_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
- d8_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF', d7_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
- d10_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF', d11_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
- last_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', d8_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', d7_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
- d10_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', d11_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
+ device_name VARCHAR(100) NOT NULL DEFAULT '', token_hash CHAR(64) NULL, is_active TINYINT(1) NOT NULL DEFAULT 1, sort_order INT NOT NULL DEFAULT 0,
+ os1_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
+ os2_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF', legacy_d7_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
+ os3_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF', os4_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
+ last_change_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', os2_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', legacy_d7_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
+ os3_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', os4_source VARCHAR(100) NOT NULL DEFAULT 'BOOT',
  last_ip VARCHAR(45) NULL, last_seen_at DATETIME(3) NULL,
  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
  PRIMARY KEY(id), UNIQUE KEY uq_wemos_device_id(device_id)
 ) ENGINE=InnoDB;
-CREATE TABLE wemos_contact_sets (
+CREATE TABLE wemos_channels (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, device_id VARCHAR(100) NOT NULL,
- set_name VARCHAR(100) NOT NULL, Digital_input VARCHAR(20) NOT NULL, Degital_output VARCHAR(20) NOT NULL,
- active TINYINT(1) NOT NULL DEFAULT 1, current_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
+ channel_name VARCHAR(100) NOT NULL, input_signal VARCHAR(20) NOT NULL, output_signal VARCHAR(20) NOT NULL,
+ is_active TINYINT(1) NOT NULL DEFAULT 1, output_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
  input_state ENUM('ON','OFF') NOT NULL DEFAULT 'OFF',
- last_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', input_string TEXT NULL, output_string TEXT NULL, sort_order INT NOT NULL DEFAULT 0,
+ last_change_source VARCHAR(100) NOT NULL DEFAULT 'BOOT', input_message TEXT NULL, output_message TEXT NULL, sort_order INT NOT NULL DEFAULT 0,
  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
- PRIMARY KEY(id), UNIQUE KEY uq_contact_input(device_id,Digital_input), UNIQUE KEY uq_contact_output(device_id,Degital_output),
+ PRIMARY KEY(id), UNIQUE KEY uq_contact_input(device_id,input_signal), UNIQUE KEY uq_contact_output(device_id,output_signal),
  CONSTRAINT fk_contact_device FOREIGN KEY(device_id) REFERENCES wemos_devices(device_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-CREATE TABLE wemos_device_commands (
+CREATE TABLE wemos_commands (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, command_id CHAR(36) NOT NULL, device_id VARCHAR(100) NOT NULL,
- pin_name VARCHAR(20) NOT NULL DEFAULT 'OS1',
- desired_state ENUM('ON','OFF') NOT NULL, output_string TEXT NULL, requester VARCHAR(100) NOT NULL DEFAULT 'CLIENT',
- status ENUM('PENDING','DELIVERED','ACKED','FAILED','CANCELLED') NOT NULL DEFAULT 'PENDING',
- changed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
- PRIMARY KEY(id), UNIQUE KEY uq_wemos_command_id(command_id), KEY idx_wemos_poll(device_id,status,id),
+ output_signal VARCHAR(20) NOT NULL DEFAULT 'OS1',
+ requested_output_state ENUM('ON','OFF') NOT NULL, output_message TEXT NULL, requested_by VARCHAR(100) NOT NULL DEFAULT 'CLIENT',
+ command_status ENUM('PENDING','DELIVERED','ACKED','FAILED','CANCELLED') NOT NULL DEFAULT 'PENDING',
+ status_changed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+ PRIMARY KEY(id), UNIQUE KEY uq_wemos_command_id(command_id), KEY idx_wemos_poll(device_id,command_status,id),
  CONSTRAINT fk_wemos_command_device FOREIGN KEY(device_id) REFERENCES wemos_devices(device_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-CREATE TABLE wemos_lamp_state_history (
- id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, device_id VARCHAR(100) NOT NULL, pin_name VARCHAR(20) NOT NULL DEFAULT 'OS1',
- previous_state ENUM('ON','OFF') NULL, new_state ENUM('ON','OFF') NOT NULL, source VARCHAR(100) NOT NULL,
- `String` TEXT NULL,
+CREATE TABLE wemos_state_history (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, device_id VARCHAR(100) NOT NULL, output_signal VARCHAR(20) NOT NULL DEFAULT 'OS1',
+ previous_output_state ENUM('ON','OFF') NULL, output_state ENUM('ON','OFF') NOT NULL, change_source VARCHAR(100) NOT NULL,
+ signal_message TEXT NULL,
  command_id CHAR(36) NULL, changed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
  PRIMARY KEY(id), KEY idx_wemos_history(device_id,changed_at),
  CONSTRAINT fk_wemos_history_device FOREIGN KEY(device_id) REFERENCES wemos_devices(device_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-INSERT INTO wemos_devices(device_id,device_name,current_state,last_source) VALUES('WEMOS-D1-001','WEMOS-D1-001','OFF','BOOT');
+INSERT INTO wemos_devices(device_id,device_name,os1_state,last_change_source) VALUES('WEMOS-D1-001','WEMOS-D1-001','OFF','BOOT');
 
-INSERT INTO wemos_contact_sets(device_id,set_name,Digital_input,Degital_output,sort_order) VALUES
+INSERT INTO wemos_channels(device_id,channel_name,input_signal,output_signal,sort_order) VALUES
 ('WEMOS-D1-001','채널 01','IS1','OS1',0),('WEMOS-D1-001','채널 02','IS2','OS2',1),('WEMOS-D1-001','채널 03','IS3','OS3',2),('WEMOS-D1-001','채널 04','IS4','OS4',3),('WEMOS-D1-001','채널 05','IS5','OS5',4),('WEMOS-D1-001','채널 06','IS6','OS6',5),('WEMOS-D1-001','채널 07','IS7','OS7',6),('WEMOS-D1-001','채널 08','IS8','OS8',7);
