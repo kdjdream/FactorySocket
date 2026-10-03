@@ -105,6 +105,7 @@ CREATE TABLE wemos_device_commands (
 CREATE TABLE wemos_lamp_state_history (
  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, device_id VARCHAR(100) NOT NULL, pin_name VARCHAR(20) NOT NULL DEFAULT 'OS1',
  previous_state ENUM('ON','OFF') NULL, new_state ENUM('ON','OFF') NOT NULL, source VARCHAR(100) NOT NULL,
+ `String` TEXT NULL,
  command_id CHAR(36) NULL, changed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
  PRIMARY KEY(id), KEY idx_wemos_history(device_id,changed_at),
  CONSTRAINT fk_wemos_history_device FOREIGN KEY(device_id) REFERENCES wemos_devices(device_id) ON DELETE CASCADE

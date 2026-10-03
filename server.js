@@ -640,6 +640,31 @@ async function migrateWemosContactSignalColumns(columnNames) {
     }
   }
 }
+async function migrateWemosHistoryStrings(columnNames) {
+  if (!columnNames.has("string")) {
+    await query("ALTER TABLE wemos_lamp_state_history ADD COLUMN `String` TEXT NULL");
+    columnNames.add("string");
+  }
+  const inputColumn = columnNames.has("input_string") ? "input_string" : "NULL";
+  const outputColumn = columnNames.has("output_string") ? "output_string" : "NULL";
+  if (inputColumn !== "NULL" || outputColumn !== "NULL") {
+    const valueExpression = columnNames.has("string_type")
+      ? `CASE WHEN string_type='IStr' THEN ${inputColumn}
+         WHEN string_type='OStr' THEN ${outputColumn} ELSE COALESCE(${inputColumn},${outputColumn}) END`
+      : `CASE WHEN source='WEMOS' OR source=device_id THEN ${inputColumn} ELSE ${outputColumn} END`;
+    await query(`UPDATE wemos_lamp_state_history SET \`String\`=${valueExpression} WHERE \`String\` IS NULL`);
+    for (const columnName of ["input_string", "output_string"]) {
+      if (columnNames.has(columnName)) {
+        await query(`ALTER TABLE wemos_lamp_state_history DROP COLUMN ${columnName}`);
+        columnNames.delete(columnName);
+      }
+    }
+  }
+  if (columnNames.has("string_type")) {
+    await query("ALTER TABLE wemos_lamp_state_history DROP COLUMN string_type");
+    columnNames.delete("string_type");
+  }
+}
 async function ensureWemosSchema() {
   await query(`CREATE TABLE IF NOT EXISTS wemos_devices (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -754,10 +779,15 @@ async function ensureWemosSchema() {
     new_state ENUM('ON','OFF') NOT NULL,
     source VARCHAR(100) NOT NULL,
     command_id CHAR(36) NULL,
+    \`String\` TEXT NULL,
     changed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     PRIMARY KEY (id), KEY idx_wemos_history (device_id,changed_at),
     CONSTRAINT fk_wemos_hist_device FOREIGN KEY (device_id) REFERENCES wemos_devices(device_id) ON DELETE CASCADE
   ) ENGINE=InnoDB`);
+
+  const historyColumns = await query(`SELECT COLUMN_NAME AS column_name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='wemos_lamp_state_history'`);
+  const historyColumnNames = new Set(historyColumns.map(column => String(column.column_name).toLowerCase()));
+  await migrateWemosHistoryStrings(historyColumnNames);
 
   await query(`INSERT INTO wemos_devices(device_id,device_name,token_hash,current_state,last_source)
     VALUES(?,?,?,'OFF','BOOT')
@@ -810,7 +840,10 @@ async function getWemosState(deviceId = null) {
 
   const device = devices[0];
   const sets = await query(
-    `SELECT id,set_name,Digital_input,Degital_output,active,current_state,input_state,last_source,input_string,output_string,sort_order
+    `SELECT id,set_name,Digital_input,Degital_output,active,current_state,input_state,last_source,input_string,output_string,sort_order,
+      COALESCE((SELECT h.changed_at FROM wemos_lamp_state_history h
+      WHERE h.device_id=wemos_contact_sets.device_id AND h.pin_name=wemos_contact_sets.Degital_output
+          ORDER BY h.id DESC LIMIT 1), wemos_contact_sets.created_at) AS last_changed_at
      FROM wemos_contact_sets WHERE device_id=? ORDER BY sort_order,id`,
     [device.device_id]
   );
@@ -825,11 +858,12 @@ async function getWemosState(deviceId = null) {
 
 async function getWemosHistory(limit=50, deviceId=null) {
   const n=Math.min(Math.max(Number(limit||50),1),50);
+  const fields="id,device_id,pin_name,previous_state,new_state,source,command_id,`String`,changed_at";
   if (deviceId) return await query(
-    `SELECT id,device_id,pin_name,previous_state,new_state,source,command_id,changed_at
+    `SELECT ${fields}
      FROM wemos_lamp_state_history WHERE device_id=? ORDER BY id DESC LIMIT ${n}`,[deviceId]);
   return await query(
-    `SELECT id,device_id,pin_name,previous_state,new_state,source,command_id,changed_at
+    `SELECT ${fields}
      FROM wemos_lamp_state_history ORDER BY id DESC LIMIT ${n}`);
 }
 
@@ -872,17 +906,23 @@ async function recordWemosState(deviceId,pin,newState,source,commandId=null,reco
   const reportedInputString = message.IStr ?? message.sendString;
   const reportedOutputString = message.OStr ?? message.receiveString;
   const reportedInputState = parseWemosState(message.inputState);
+  const deviceOrigin = recordDeviceCommand || source === deviceId || source === "WEMOS";
   const connection=await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
     const rows=await connectionQuery(connection,
-      `SELECT current_state,input_state,last_source,input_string,output_string FROM wemos_contact_sets WHERE device_id=? AND Degital_output=? LIMIT 1 FOR UPDATE`,
+      `SELECT current_state,input_state,last_source,input_string,output_string,
+         COALESCE((SELECT h.changed_at FROM wemos_lamp_state_history h
+         WHERE h.device_id=wemos_contact_sets.device_id AND h.pin_name=wemos_contact_sets.Degital_output
+          ORDER BY h.id DESC LIMIT 1), wemos_contact_sets.created_at) AS last_changed_at
+       FROM wemos_contact_sets WHERE device_id=? AND Degital_output=? LIMIT 1 FOR UPDATE`,
       [deviceId,pin]);
 
     const inputString = String(reportedInputString ?? rows[0]?.input_string ?? "").slice(0, 10000);
     const outputString = String(reportedOutputString ?? rows[0]?.output_string ?? "").slice(0, 10000);
+    const historyString = deviceOrigin ? inputString : outputString;
     const inputState = reportedInputState || rows[0]?.input_state || "OFF";
     const previousState=rows.length ? String(rows[0].current_state) : null;
     const changed=previousState!==state;
@@ -924,9 +964,9 @@ async function recordWemosState(deviceId,pin,newState,source,commandId=null,reco
 
     if (changed) {
       await connectionQuery(connection,
-        `INSERT INTO wemos_lamp_state_history(device_id,pin_name,previous_state,new_state,source,command_id,changed_at)
-         VALUES(?,?,?,?,?,?,?)`,
-        [deviceId,pin,previousState,state,effectiveSource,effectiveCommandId,databaseTime]);
+        `INSERT INTO wemos_lamp_state_history(device_id,pin_name,previous_state,new_state,source,command_id,\`String\`,changed_at)
+         VALUES(?,?,?,?,?,?,?,?)`,
+        [deviceId,pin,previousState,state,effectiveSource,effectiveCommandId,historyString,databaseTime]);
 
       if(recordDeviceCommand) {
         await connectionQuery(connection,
@@ -952,11 +992,13 @@ async function recordWemosState(deviceId,pin,newState,source,commandId=null,reco
       OutputState: state,
       source: effectiveSource,
       changedAt: now.toISOString(),
+      lastChangedAt: changed ? now.toISOString() : (rows[0]?.last_changed_at || null),
       deviceConnected: isWemosConnected(deviceId),
       InputSignal: inputPin,
       inputState,
       IStr: inputString,
       OStr: outputString,
+      String: historyString,
       ...(typeof message.ip === "string" && message.ip.length <= 45 ? { ip:message.ip } : {})
     };
     if (changed) {
@@ -1411,7 +1453,11 @@ async function getManagedWemosDevices() {
   for (const device of devices) {
     const deviceConnected=isWemosConnected(device.device_id);
     try {
-      const sets=await query(`SELECT id,set_name,Digital_input,Degital_output,active,current_state,input_state,last_source,input_string,output_string,sort_order FROM wemos_contact_sets WHERE device_id=? ORDER BY sort_order,id`,[device.device_id]);
+      const sets=await query(`SELECT id,set_name,Digital_input,Degital_output,active,current_state,input_state,last_source,input_string,output_string,sort_order,
+        COALESCE((SELECT h.changed_at FROM wemos_lamp_state_history h
+         WHERE h.device_id=wemos_contact_sets.device_id AND h.pin_name=wemos_contact_sets.Degital_output
+         ORDER BY h.id DESC LIMIT 1), wemos_contact_sets.created_at) AS last_changed_at
+        FROM wemos_contact_sets WHERE device_id=? ORDER BY sort_order,id`,[device.device_id]);
       result.push({...device,deviceConnected,sets:sets.map((set,index)=>({...set,set_name:set.set_name===set.Degital_output?`채널 ${String(index+1).padStart(2,"0")}`:set.set_name,input_signal:set.Digital_input,output_signal:set.Degital_output,id:String(set.id)}))});
     } catch (err) {
       console.error(`Wemos 접점 세트 조회 오류 (${device.device_id}):`,err);

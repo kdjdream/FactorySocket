@@ -11,6 +11,19 @@
   const liveStates = new Map();
   const connectionStates = new Map();
 
+  function formatChangedAt(value) {
+    if (!value) return "-";
+    const normalized = typeof value === "string" && /^\d{4}-\d{2}-\d{2} /.test(value)
+      ? `${value.replace(" ", "T")}+09:00` : value;
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) return "-";
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+    }).formatToParts(date).map(part => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+  }
+
   function applyLiveState(message) {
     const deviceId = String(message.deviceId || "");
     const pin = String(message.OutputSignal ?? message.pin ?? "").toUpperCase();
@@ -32,6 +45,18 @@
         indicator.textContent = state;
         indicator.dataset.state = state;
       });
+
+    if (message.source !== undefined) {
+      document.querySelectorAll(`${deviceSelector} [data-active-last-source="${CSS.escape(pin)}"]`)
+        .forEach(element => element.textContent = String(message.source || "-"));
+    }
+
+    const changedAt = message.lastChangedAt !== undefined ? message.lastChangedAt
+      : message.type === "stateChanged" ? message.changedAt : undefined;
+    if (changedAt) {
+      document.querySelectorAll(`${deviceSelector} [data-active-last-changed-at="${CSS.escape(pin)}"]`)
+        .forEach(element => element.textContent = formatChangedAt(changedAt));
+    }
 
     if (["ON", "OFF"].includes(message.inputState)) {
       document.querySelectorAll(`${deviceSelector} [data-active-input-pin="${CSS.escape(`IS${pin.slice(2)}`)}"]`)
@@ -74,6 +99,9 @@
     if (!deviceId || !/^OS[1-8]$/.test(pin)) return;
     const key = `${deviceId}:${pin}`;
     const normalized = { ...liveStates.get(key), ...message, deviceId, OutputSignal: pin };
+    normalized.lastChangedAt = message.lastChangedAt
+      ?? (message.type === "stateChanged" ? message.changedAt : undefined)
+      ?? liveStates.get(key)?.lastChangedAt;
     if (message.OutputState !== undefined || message.state !== undefined) {
       normalized.OutputState = message.OutputState ?? message.state;
     }
@@ -161,14 +189,32 @@
                 <article class="channel-card channel-${escapeHtml(String(set.Degital_output).toLowerCase())}">
                   <div class="channel-card-head">
                     <div>
+                      ${viewOnly ? "" : `
+                        <div class="channel-device-identity">
+                          <code>${escapeHtml(device.device_id)}</code>
+                          <span>${escapeHtml(device.device_name || device.device_id)}</span>
+                        </div>
+                      `}
                       <span class="channel-number">
                         CHANNEL ${String(index + 1).padStart(2, "0")}
                       </span>
                       <h3>${escapeHtml(set.set_name)}</h3>
                     </div>
 
-                    <div class="output-readout">
-                      <span>현재 OS 상태</span>
+                    <div class="output-readout channel-last-source">
+                      <span>최근 변경</span>
+                      <strong data-active-last-source="${escapeHtml(set.Degital_output)}">${escapeHtml(set.last_source || "-")}</strong>
+                      <time data-active-last-changed-at="${escapeHtml(set.Degital_output)}">${escapeHtml(formatChangedAt(set.last_changed_at ?? set.created_at))}</time>
+                    </div>
+                  </div>
+
+                  <div class="signal-path">
+                    <span class="signal-state-group">
+                      <span class="signal-pin">${escapeHtml(set.Digital_input)}</span>
+                      <b class="pin-state" data-active-input-pin="${escapeHtml(set.Digital_input)}" data-state="${inputState}">${inputState}</b>
+                    </span>
+                    <span class="signal-state-group">
+                      <span class="signal-pin">${escapeHtml(set.Degital_output)}</span>
                       <b
                         class="pin-state"
                         data-active-pin="${escapeHtml(set.Degital_output)}"
@@ -176,14 +222,7 @@
                       >
                         ${state}
                       </b>
-                    </div>
-                  </div>
-
-                  <div class="signal-path">
-                    <span class="signal-pin">${escapeHtml(set.input_signal)}</span>
-                    <b class="pin-state" data-active-input-pin="${escapeHtml(set.Digital_input)}" data-state="${inputState}">${inputState}</b>
-                    <span class="signal-arrow" aria-hidden="true">→</span>
-                    <strong>${escapeHtml(set.output_signal)} 출력 신호</strong>
+                    </span>
                   </div>
                   <div class="signal-strings">
                     <span>${escapeHtml(inputStringName)}: <code data-active-input-string="${escapeHtml(set.Digital_input)}">${escapeHtml(set.input_string || "")}</code></span>
@@ -194,12 +233,20 @@
                     viewOnly
                       ? ""
                       : `
-                        <label class="wemos-output-string">
-                          <span>${escapeHtml(outputStringName)}</span>
-                          <input type="text" data-command-output-string="${escapeHtml(set.Degital_output)}"
-                            value="${escapeHtml(set.output_string || "")}" maxlength="10000" autocomplete="off"
-                            aria-label="${escapeHtml(outputStringName)}">
-                        </label>
+                        <div class="wemos-output-strings">
+                          <label class="wemos-output-string">
+                            <span>${escapeHtml(outputStringName)} ON</span>
+                            <input type="text" data-command-output-string="${escapeHtml(set.Degital_output)}" data-command-state="ON"
+                              value="${escapeHtml(set.output_string || "")}" maxlength="10000" autocomplete="off"
+                              aria-label="${escapeHtml(outputStringName)} ON">
+                          </label>
+                          <label class="wemos-output-string">
+                            <span>${escapeHtml(outputStringName)} OFF</span>
+                            <input type="text" data-command-output-string="${escapeHtml(set.Degital_output)}" data-command-state="OFF"
+                              value="${escapeHtml(set.output_string || "")}" maxlength="10000" autocomplete="off"
+                              aria-label="${escapeHtml(outputStringName)} OFF">
+                          </label>
+                        </div>
                         <div
                           class="channel-actions"
                           role="group"
@@ -242,9 +289,17 @@
       : '<p class="empty-state">활성 Wemos 장치가 없습니다.</p>';
 
     // API 조회와 WebSocket 연결 사이의 타이밍 차이를 보정합니다.
-    for (const message of liveStates.values()) {
-      applyLiveString(message);
-      applyLiveState(message);
+    for (const device of devices) {
+      for (const channel of device.sets || []) {
+        const cached = liveStates.get(`${device.device_id}:${channel.Degital_output}`);
+        rememberLiveMessage({
+          deviceId: device.device_id, OutputSignal: channel.Degital_output,
+          OutputState: channel.current_state, inputState: channel.input_state,
+          source: channel.last_source, IStr: channel.input_string, OStr: channel.output_string,
+          ...cached,
+          lastChangedAt: cached?.lastChangedAt ?? channel.last_changed_at ?? channel.created_at
+        });
+      }
     }
 
     for (const [deviceId, connected] of connectionStates) {
@@ -275,7 +330,7 @@
         deviceId: button.dataset.deviceId,
         OutputSignal: button.dataset.pin,
         severSignal: button.dataset.state,
-        OStr: button.closest(".channel-card")?.querySelector("[data-command-output-string]")?.value ?? ""
+        OStr: button.closest(".channel-card")?.querySelector(`[data-command-output-string][data-command-state="${CSS.escape(button.dataset.state)}"]`)?.value ?? ""
       });
     }
   });
@@ -303,6 +358,8 @@
           deviceId: message.state.device_id, OutputSignal: channel.Degital_output,
           InputSignal: channel.Digital_input,
           OutputState: channel.current_state, inputState: channel.input_state,
+          source: channel.last_source,
+          lastChangedAt: channel.last_changed_at ?? channel.created_at,
           IStr: channel.input_string, OStr: channel.output_string
         });
       }

@@ -698,9 +698,23 @@ html[data-display-mode="large"] button { font-size: 1.05em; }
 .signal-path strong { margin-left: auto; color: var(--wemos-ink); font-size: 12px; white-space: nowrap; }
 .signal-pin { color: var(--channel-color); font-size: 12px; font-weight: 800; white-space: nowrap; }
 .signal-arrow { color: var(--channel-color); font-size: 15px; }
+.active-wemos-channels .channel-card-head > div:first-child { min-width: 0; }
+.channel-device-identity { display: grid; gap: 3px; min-width: 0; margin-bottom: 7px; overflow-wrap: anywhere; }
+.channel-device-identity code { color: var(--wemos-muted); font-size: 10px; }
+.channel-device-identity span { color: var(--wemos-ink); font-size: 12px; line-height: 1.4; }
+.active-wemos-channels .channel-card h3 { overflow-wrap: anywhere; }
+.channel-last-source { min-width: 0; max-width: 50%; flex: 0 1 45%; box-sizing: border-box; }
+.channel-last-source strong { max-width: 100%; color: var(--wemos-ink); font-size: 13px; text-align: center; overflow-wrap: anywhere; }
+.channel-last-source time { max-width: 100%; color: var(--wemos-muted); font-size: 10px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.active-wemos-channels .signal-path { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 12px; }
+.signal-state-group { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.active-wemos-channels .signal-state-group { min-width: 0; justify-self: start; }
+.active-wemos-channels .signal-state-group:last-child { justify-self: end; }
+.wemos-page .signal-path .pin-state { min-width: 48px; min-height: 28px; gap: 4px; font-size: 14px; }
 .channel-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .signal-strings { display: grid; gap: 6px; min-width: 0; margin-bottom: 12px; font-size: 12px; }
 .signal-strings code { overflow-wrap: anywhere; white-space: pre-wrap; }
+.wemos-output-strings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .wemos-output-string { display: grid; gap: 5px; min-width: 0; margin-bottom: 12px; color: var(--wemos-muted); font-size: 12px; }
 .wemos-output-string input { box-sizing: border-box; width: 100%; min-width: 0; padding: 8px; border: 1px solid var(--wemos-line); border-radius: 4px; background: var(--wemos-ground); color: var(--wemos-ink); }
 .wemos-page .output-button {
@@ -738,6 +752,9 @@ html[data-display-mode="large"] button { font-size: 1.05em; }
 .wemos-page .wemos-table th:first-child, .wemos-page .wemos-table td:first-child { width: 17%; }
 .wemos-page .wemos-table th:nth-child(2), .wemos-page .wemos-table td:nth-child(2) { width: 9%; }
 .wemos-page .wemos-table th:last-child, .wemos-page .wemos-table td:last-child { width: 25%; }
+.wemos-page .wemos-history-table { table-layout: auto; }
+.wemos-page .wemos-history-table th:nth-child(2), .wemos-page .wemos-history-table td:nth-child(2) { width: 22%; min-width: 180px; white-space: nowrap; }
+.wemos-page .wemos-history-table td:nth-child(5) { min-width: 160px; white-space: pre-wrap; overflow-wrap: anywhere; }
 @keyframes channel-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 980px) {
   .wemos-statusbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }

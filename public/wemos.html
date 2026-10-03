@@ -4,7 +4,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
-	<title>Wemos D1 R1 - 접점 제어</title>
+	<title>Wemos D1 R1 - Device Control</title>
 	<link rel="stylesheet" href="/style.css?v=20260930-1">
 	<script src="/page-settings.js?v=20260928-1" defer></script>
 	<script src="/logout.js?v=20260930-1" defer></script>
@@ -15,7 +15,7 @@
 		<header class="wemos-header">
 			<div class="wemos-heading">
 				<p class="wemos-eyebrow">WEMOS D1 R1 <span>·</span> OUTPUT CONTROL</p>
-				<h1>접점 제어</h1>
+				<h1>Device Control</h1>
 			</div>
 			<nav class="wemos-page-links" aria-label="Wemos 페이지">
 				<!-- <a class="wemos-dashboard-link" href="/">현황판</a> -->
@@ -40,9 +40,9 @@
 			<div class="section-heading">
 				<div>
 					<p class="wemos-eyebrow">CONTROL CHANNELS</p>
-					<h2 id="channel-title">핀별 제어</h2>
+					<h2 id="channel-title">Device Control</h2>
 				</div>
-				<p class="section-note">접점 입력과 대응 출력을 한 쌍으로 표시합니다.</p>
+				<p class="section-note">IS는 디바이스 입력 변수(bool), OS는 디바이스 출력 변수(Bool)입니다. </p>
 			</div>
 			<div class="channel-grid" hidden>
 				<article class="channel-card channel-d8">
@@ -55,7 +55,7 @@
 					</div>
 					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
 							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
-						<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD8"
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD8"
 							class="output-button" type="button" disabled
 							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="offD8"
 							class="output-button" type="button" disabled
@@ -71,7 +71,7 @@
 					</div>
 					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
 							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
-						<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="on"
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="on"
 							class="output-button" type="button" disabled
 							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="off"
 							class="output-button" type="button" disabled
@@ -87,7 +87,7 @@
 					</div>
 					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
 							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
-						<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD10"
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD10"
 							class="output-button" type="button" disabled
 							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="offD10"
 							class="output-button" type="button" disabled
@@ -103,7 +103,7 @@
 					</div>
 					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
 							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
-						<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD11"
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD11"
 							class="output-button" type="button" disabled
 							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="offD11"
 							class="output-button" type="button" disabled
@@ -113,11 +113,8 @@
 			<div id="activeWemosWindows" class="active-wemos-windows">
 				<p class="empty-state">활성 Wemos 장치를 불러오는 중입니다.</p>
 			</div>
-			<div class="report-line"><span>최근 변경 출처 <b id="source">-</b></span><span>마지막 보고 <b id="seen">-</b></span>
-			</div>
-			<p id="msg" class="wemos-message" role="status" aria-live="polite"></p>
-		</section>
 
+		</section>
 		<section class="history-section" aria-labelledby="history-title">
 			<div class="section-heading">
 				<div>
@@ -126,16 +123,15 @@
 				</div>
 			</div>
 			<div class="table-wrap">
-				<table class="wemos-table">
+				<table class="wemos-table wemos-history-table">
 					<thead>
 						<tr>
 							<th>시간</th>
 							<th>장치</th>
-							<th>핀</th>
-							<th>이전</th>
+							<th>변수</th>
 							<th>현재</th>
+							<th>문자열</th>
 							<th>출처</th>
-							<th>Command ID</th>
 						</tr>
 					</thead>
 					<tbody id="history"></tbody>
@@ -143,30 +139,6 @@
 			</div>
 		</section>
 
-		<section class="history-section command-history" aria-labelledby="commands-title">
-			<div class="section-heading">
-				<div>
-					<p class="wemos-eyebrow">COMMANDS</p>
-					<h2 id="commands-title">최근 명령</h2>
-				</div>
-			</div>
-			<div class="table-wrap">
-				<table class="wemos-table">
-					<thead>
-						<tr>
-							<th>시간</th>
-							<th>장치</th>
-							<th>핀</th>
-							<th>요청</th>
-							<th>회원 ID</th>
-							<th>상태</th>
-							<th>Command ID</th>
-						</tr>
-					</thead>
-					<tbody id="commands"></tbody>
-				</table>
-			</div>
-		</section>
 	</main>
 	<script src="/wemos.js?v=20261002-1"></script>
 	<script src="/wemos-active-devices.js?v=20260929-8"></script>

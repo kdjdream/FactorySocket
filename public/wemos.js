@@ -92,10 +92,9 @@ function renderHistory() {
       <td>${escapeHtml(formatDate(row.changed_at))}</td>
       <td>${escapeHtml(row.device_id || "-")}</td>
       <td>${escapeHtml(row.pin_name || "OS1")}</td>
-      <td>${escapeHtml(row.previous_state || "-")}</td>
       <td>${escapeHtml(row.new_state)}</td>
+      <td>${escapeHtml(row.String ?? "-")}</td>
       <td>${escapeHtml(row.source)}</td>
-      <td>${escapeHtml(row.command_id || "-")}</td>
     </tr>
   `).join("");
 }
@@ -237,7 +236,8 @@ function handle(message) {
         previous_state: message.previousState,
         new_state: message.OutputState ?? message.state,
         source: message.source,
-        command_id: message.commandId
+        command_id: message.commandId,
+        String: message.String
       });
       break;
 

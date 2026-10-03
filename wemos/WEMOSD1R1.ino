@@ -3,6 +3,25 @@
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 
+// ---- 배포 환경 설정 ----
+// Wi-Fi 비밀번호가 빈 값이면 비밀번호 없는 네트워크에 연결합니다.
+const char *WIFI_SSID = "CSUH_FREE";
+const char *WIFI_PASSWORD = "";
+
+// WSS 배포 설정 예시: 호스트에는 프로토콜이나 경로를 넣지 않습니다.
+// TLS 사용 시 서버 인증서 검증 정책은 별도로 확인해야 합니다.
+// const char *SERVER_HOST = "YOUR_CLOUDTYPE_HOST";
+// const uint16_t SERVER_PORT = 443;
+// const bool SERVER_USE_TLS = true;
+
+const char *SERVER_HOST = "10.20.36.156";
+const uint16_t SERVER_PORT = 8080;
+const bool SERVER_USE_TLS = false;
+
+// 서버에 등록한 장치 ID와 발급된 토큰을 사용합니다. 토큰은 로그나 공개 저장소에 노출하지 마세요.
+const char *DEVICE_ID = "WEMOS-D1-001";
+const char *DEVICE_TOKEN = "65494229077631fbb57e46a1a0e5e3c21b502efb69e1548a24b9a2258369c510";
+
 /*
  * Wemos D1 R1 - 8채널 논리 입력/출력 통신
  *
@@ -76,24 +95,6 @@ const unsigned long WS_PING_INTERVAL_MS = 15000;
 const unsigned long WS_PONG_TIMEOUT_MS = 3000;
 const uint8_t WS_DISCONNECT_TIMEOUT_COUNT = 2;
 
-// ---- 배포 환경 설정 ----
-// Wi-Fi 비밀번호가 빈 값이면 비밀번호 없는 네트워크에 연결합니다.
-const char *WIFI_SSID = "CSUH_FREE";
-const char *WIFI_PASSWORD = "";
-
-// WSS 배포 설정 예시: 호스트에는 프로토콜이나 경로를 넣지 않습니다.
-// TLS 사용 시 서버 인증서 검증 정책은 별도로 확인해야 합니다.
-// const char *SERVER_HOST = "YOUR_CLOUDTYPE_HOST";
-// const uint16_t SERVER_PORT = 443;
-// const bool SERVER_USE_TLS = true;
-
-const char *SERVER_HOST = "10.20.39.105";
-const uint16_t SERVER_PORT = 8080;
-const bool SERVER_USE_TLS = false;
-
-// 서버에 등록한 장치 ID와 발급된 토큰을 사용합니다. 토큰은 로그나 공개 저장소에 노출하지 마세요.
-const char *DEVICE_ID = "WEMOS-D1-001";
-const char *DEVICE_TOKEN = "65494229077631fbb57e46a1a0e5e3c21b502efb69e1548a24b9a2258369c510";
 
 // hello에서 알리는 기본 출력이며, command에 OutputSignal이 없을 때도 이 채널을 사용합니다.
 const char *DEVICE_OUTPUT_SIGNAL = "OS1";
@@ -193,17 +194,19 @@ void printOutputStatus(
     ControlChannel &channel,
     const String &source)
 {
-    Serial.print("[");
-    Serial.print(channel.outputSignal);
-    Serial.print("] ");
-
-    Serial.print(source);
-
-    Serial.print(" | INPUT=");
+    Serial.print("[STATUS] InputSignal=");
+    Serial.print(channel.inputSignal);
+    Serial.print(" inputState=");
     Serial.print(channel.inputState ? "ON" : "OFF");
 
-    Serial.print(" | OUTPUT=");
-    Serial.println(channel.outputState ? "ON" : "OFF");
+    Serial.print(" | OutputSignal=");
+    Serial.print(channel.outputSignal);
+    Serial.print(" OutputState=");
+    Serial.print(channel.outputState ? "ON" : "OFF");
+    Serial.print(" | severSignal=");
+    Serial.print(channel.severSignal ? "ON" : "OFF");
+    Serial.print(" | source=");
+    Serial.println(source);
 }
 
 /**
@@ -228,7 +231,7 @@ bool connectWiFi()
             return false;
         }
 
-        Serial.print("[WIFI] Connect timeout, status = ");
+        Serial.print("[WIFI] Connection timeout | status=");
         Serial.println(static_cast<int>(WiFi.status()));
 
         wifiAttemptPending = false;
@@ -242,10 +245,7 @@ bool connectWiFi()
     lastWiFiAttemptMs = now;
     wifiAttemptPending = true;
 
-    Serial.println();
-    Serial.println("[WIFI] Connecting...");
-
-    Serial.print("[WIFI] SSID = ");
+    Serial.print("[WIFI] Connecting | SSID=");
     Serial.println(WIFI_SSID);
 
     WiFi.mode(WIFI_STA);
@@ -312,8 +312,12 @@ void startWebSocket()
 
     wsStarted = true;
 
-    Serial.println(
-        "[WS] Starting connection");
+    Serial.print("[WS] Connecting | transport=");
+    Serial.print(SERVER_USE_TLS ? "WSS" : "WS");
+    Serial.print(" | host=");
+    Serial.print(SERVER_HOST);
+    Serial.print(" | port=");
+    Serial.println(SERVER_PORT);
 }
 
 /**
@@ -331,14 +335,11 @@ void handleWiFi()
         wasWiFiConnected = true;
         wifiAttemptPending = false;
 
-        Serial.println();
-        Serial.println("[WIFI] Connected");
-
-        Serial.print("[WIFI] IP = ");
-        Serial.println(WiFi.localIP());
-
-        Serial.print("[WIFI] RSSI = ");
-        Serial.println(WiFi.RSSI());
+        Serial.print("[WIFI] Connected | IP=");
+        Serial.print(WiFi.localIP());
+        Serial.print(" | RSSI=");
+        Serial.print(WiFi.RSSI());
+        Serial.println(" dBm");
 
         startWebSocket();
     }
@@ -459,13 +460,16 @@ void sendStateReport(
 
     webSocket.sendTXT(payload);
 
-    Serial.print("[STATE] Report = ");
+    Serial.print("[STATE TX] OutputSignal=");
     Serial.print(channel.outputSignal);
-    Serial.print(" = ");
-    Serial.println(
-        channel.outputState
-            ? "ON"
-            : "OFF");
+    Serial.print(" OutputState=");
+    Serial.print(channel.outputState ? "ON" : "OFF");
+    Serial.print(" | InputSignal=");
+    Serial.print(channel.inputSignal);
+    Serial.print(" inputState=");
+    Serial.print(channel.inputState ? "ON" : "OFF");
+    Serial.print(" | source=");
+    Serial.println(source);
 }
 
 /**
@@ -477,7 +481,9 @@ void sendChannelString(ControlChannel &channel)
 {
     if (!wsConnected)
     {
-        Serial.println("[SEND] WebSocket disconnected");
+        Serial.print("[STRING TX] Skipped | InputSignal=");
+        Serial.print(channel.inputSignal);
+        Serial.println(" | WebSocket disconnected");
         return;
     }
 
@@ -493,9 +499,9 @@ void sendChannelString(ControlChannel &channel)
     serializeJson(document, payload);
     webSocket.sendTXT(payload);
 
-    Serial.print("[SEND] ");
-    Serial.print(channel.outputSignal);
-    Serial.print(" = ");
+    Serial.print("[STRING TX] IStr");
+    Serial.print(channel.inputSignal + 2);
+    Serial.print("=");
     Serial.println(channel.inputString);
 }
 
@@ -539,8 +545,14 @@ void sendAck(
 
     webSocket.sendTXT(payload);
 
-    Serial.print("[ACK] sent : ");
-    Serial.println(commandId);
+    Serial.print("[ACK TX] commandId=");
+    Serial.print(commandId);
+    Serial.print(" | OutputSignal=");
+    Serial.print(channel.outputSignal);
+    Serial.print(" OutputState=");
+    Serial.print(stateValue);
+    Serial.print(" | success=");
+    Serial.println(success ? "true" : "false");
 }
 
 /**
@@ -569,9 +581,9 @@ void applyOutputState(
     channel.outputState =
         desiredState;
 
-    Serial.print("[");
+    Serial.print("[OUTPUT] OutputSignal=");
     Serial.print(channel.outputSignal);
-    Serial.print("] ");
+    Serial.print(" | OutputState=");
 
     Serial.print(
         previousState
@@ -585,7 +597,7 @@ void applyOutputState(
             ? "ON"
             : "OFF");
 
-    Serial.print(" | SOURCE=");
+    Serial.print(" | source=");
 
     Serial.println(source);
 
@@ -612,7 +624,7 @@ void applyRemoteCommand(JsonObject command)
     if (commandId.length() == 0)
     {
         Serial.println(
-            "[CMD] commandId missing");
+            "[CMD RX] Rejected | commandId missing");
 
         return;
     }
@@ -638,7 +650,7 @@ void applyRemoteCommand(JsonObject command)
     if (channel == nullptr)
     {
         Serial.print(
-            "[CMD] Unsupported output signal = ");
+            "[CMD RX] Rejected | unsupported OutputSignal=");
 
         Serial.println(outputSignal);
 
@@ -651,9 +663,9 @@ void applyRemoteCommand(JsonObject command)
     if (receivedString.length() > 0)
     {
         channel->outputString = receivedString;
-        Serial.print("[RECV] ");
-        Serial.print(channel->inputSignal);
-        Serial.print(" = ");
+        Serial.print("[STRING RX] OStr");
+        Serial.print(channel->outputSignal + 2);
+        Serial.print("=");
         Serial.println(channel->outputString);
     }
 
@@ -665,8 +677,10 @@ void applyRemoteCommand(JsonObject command)
     if (requestedState != "ON" &&
         requestedState != "OFF")
     {
-        Serial.println(
-            "[CMD] Invalid state");
+        Serial.print("[CMD RX] Rejected | OutputSignal=");
+        Serial.print(channel->outputSignal);
+        Serial.print(" | invalid severSignal=");
+        Serial.println(requestedState);
 
         return;
     }
@@ -681,9 +695,12 @@ void applyRemoteCommand(JsonObject command)
         channel->lastProcessedCommandId)
     {
         Serial.print(
-            "[CMD] Duplicate : ");
-
-        Serial.println(commandId);
+            "[CMD RX] Duplicate | commandId=");
+        Serial.print(commandId);
+        Serial.print(" | OutputSignal=");
+        Serial.print(channel->outputSignal);
+        Serial.print(" | actual OutputState=");
+        Serial.println(channel->outputState ? "ON" : "OFF");
 
         sendAck(
             *channel,
@@ -695,19 +712,12 @@ void applyRemoteCommand(JsonObject command)
         return;
     }
 
-    Serial.println();
-    Serial.println(
-        "[CMD] New command");
-
-    Serial.print("[CMD] ID = ");
-    Serial.println(commandId);
-
-    Serial.print("[CMD] State = ");
+    Serial.print("[CMD RX] commandId=");
+    Serial.print(commandId);
+    Serial.print(" | OutputSignal=");
+    Serial.print(channel->outputSignal);
+    Serial.print(" | severSignal=");
     Serial.println(requestedState);
-
-    Serial.print("[CMD] OutputSignal = ");
-    Serial.println(
-        channel->outputSignal);
 
     // 해당 OS1~OS8을 변경하고 CLIENT 출처의 보고를 예약한 뒤 ACK를 먼저 전송합니다.
     applyOutputState(
@@ -724,8 +734,12 @@ void applyRemoteCommand(JsonObject command)
     channel->lastProcessedCommandId =
         commandId;
 
-    Serial.println(
-        "[CMD] Completed");
+    Serial.print("[CMD RX] Applied | commandId=");
+    Serial.print(commandId);
+    Serial.print(" | OutputSignal=");
+    Serial.print(channel->outputSignal);
+    Serial.print(" OutputState=");
+    Serial.println(channel->outputState ? "ON" : "OFF");
 }
 
 /**
@@ -746,14 +760,14 @@ void webSocketEvent(
         wsConnected = false;
 
         Serial.println(
-            "[WS] disconnected");
+            "[WS] Disconnected");
 
         break;
 
     case WStype_ERROR:
 
         Serial.print(
-            "[WS] error: ");
+            "[WS] Error | detail=");
 
         if (length > 0)
         {
@@ -771,7 +785,7 @@ void webSocketEvent(
         wsConnected = true;
 
         Serial.println(
-            "[WS] connected");
+            "[WS] Connected");
 
         sendHello();
 
@@ -801,7 +815,7 @@ void webSocketEvent(
         if (error)
         {
             Serial.print(
-                "[WS] JSON error : ");
+                "[WS RX] Invalid JSON | error=");
 
             Serial.println(
                 error.c_str());
@@ -859,12 +873,12 @@ void handleInputSignal(
                 currentInput;
 
             Serial.print(
-                "[INPUT] ");
+                "[INPUT] InputSignal=");
 
             Serial.print(
                 channel.inputSignal);
 
-            Serial.print(" = ");
+            Serial.print(" | debounced inputState=");
 
             Serial.println(
                 currentInput
@@ -954,24 +968,24 @@ void setup()
             "WEMOS";
 
         Serial.print(
-            "[BOOT] ");
+            "[BOOT] InputSignal=");
 
         Serial.print(
             channel.inputSignal);
 
-        Serial.print(" = ");
+        Serial.print(" inputState=");
 
         Serial.print(
             channel.inputState
                 ? "ON"
                 : "OFF");
 
-        Serial.print(" -> ");
+        Serial.print(" | OutputSignal=");
 
         Serial.print(
             channel.outputSignal);
 
-        Serial.print(" = ");
+        Serial.print(" OutputState=");
 
         Serial.println(
             channel.outputState
@@ -980,7 +994,7 @@ void setup()
     }
 
     Serial.print(
-        "[BOOT] Device ID = ");
+        "[BOOT] deviceId=");
 
     Serial.println(DEVICE_ID);
 
@@ -1055,6 +1069,15 @@ void loop()
         {
 
             IStr1 = "alarm";
+        }
+        if (input == '0' || input == '1' || input == '2')
+        {
+            Serial.print("[SERIAL RX] key=");
+            Serial.print(input);
+            Serial.print(" | IS1=");
+            Serial.print(IS1 ? "ON" : "OFF");
+            Serial.print(" | IStr1=");
+            Serial.println(IStr1);
         }
         // 엔터키 문자('\r', '\n')나 공백은 조건문에서 자연스럽게 무시됨
     }

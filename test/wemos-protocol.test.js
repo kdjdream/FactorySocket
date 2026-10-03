@@ -10,13 +10,85 @@ test("server and Wemos browser scripts parse as complete JavaScript files", () =
   }
 });
 
+test("control page has six history columns and no recent commands list", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "wemos.html"), "utf8");
+  const historyHeader = html.slice(html.indexOf('aria-labelledby="history-title"'), html.indexOf('<tbody id="history"'));
+  assert.equal([...historyHeader.matchAll(/<th>/g)].length, 6);
+  assert.equal(html.includes("Command ID"), false);
+  assert.equal(html.includes('id="commands"'), false);
+  assert.equal(html.includes("최근 명령"), false);
+  assert.equal(historyHeader.includes("<th>이전</th>"), false);
+  assert.ok(historyHeader.includes("<th>현재</th>\n\t\t\t\t\t\t\t<th>문자열</th>"));
+  const target = { innerHTML: "" };
+  const source = fs.readFileSync(path.join(__dirname, "..", "public", "wemos.js"), "utf8");
+  const start = source.indexOf("function renderHistory()");
+  const end = source.indexOf("function renderCommands()", start);
+  assert.ok(start >= 0 && end > start);
+  const context = vm.createContext({
+    $: id => id === "history" ? target : null,
+    historyRows: [{ changed_at: "2026-10-03", device_id: "WEMOS-D1-001", pin_name: "OS1",
+      previous_state: "OFF", new_state: "ON", source: "operator", command_id: "hidden-command-id",
+      String: "MOTOR_ON" }],
+    formatDate: value => value, escapeHtml: value => String(value)
+  });
+  vm.runInContext(source.slice(start, end), context);
+  context.renderHistory();
+  assert.equal([...target.innerHTML.matchAll(/<td>/g)].length, 6);
+  assert.equal(target.innerHTML.includes("hidden-command-id"), false);
+  assert.equal(target.innerHTML.includes("<td>OFF</td>"), false);
+  assert.ok(target.innerHTML.includes("<td>ON</td>\n      <td>MOTOR_ON</td>"));
+  context.historyRows[0].String = "sensor-new";
+  context.renderHistory();
+  assert.ok(target.innerHTML.includes("<td>sensor-new</td>"));
+  assert.equal(target.innerHTML.includes("IStr:"), false);
+  assert.equal(target.innerHTML.includes("OStr:"), false);
+  assert.equal(target.innerHTML.includes("MOTOR_ON"), false);
+  context.historyRows[0].String = null;
+  context.renderHistory();
+  assert.ok(target.innerHTML.includes("<td>-</td>"));
+});
+
+test("history device column has a wider non-wrapping layout scoped to its table", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "public", "wemos.html"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "..", "public", "style.css"), "utf8");
+  assert.ok(html.includes('class="wemos-table wemos-history-table"'));
+  assert.match(css, /\.wemos-page \.wemos-history-table \{ table-layout: auto; \}/);
+  assert.match(css, /\.wemos-history-table td:nth-child\(2\) \{ width: 22%; min-width: 180px; white-space: nowrap; \}/);
+});
+
+test("history string migration copies values before dropping old columns and is repeatable", async () => {
+  const { context, sqlCalls } = createHarness();
+  const columns = new Set(["string_type", "input_string", "output_string"]);
+  await context.migrateWemosHistoryStrings(columns);
+  assert.ok(sqlCalls[0].sql.includes("ADD COLUMN `String`"));
+  assert.ok(sqlCalls[1].sql.includes("WHEN string_type='IStr' THEN input_string"));
+  assert.ok(sqlCalls[1].sql.includes("WHEN string_type='OStr' THEN output_string"));
+  assert.ok(sqlCalls[1].sql.includes("WHERE `String` IS NULL"));
+  assert.ok(sqlCalls[2].sql.includes("DROP COLUMN input_string"));
+  assert.ok(sqlCalls[3].sql.includes("DROP COLUMN output_string"));
+  assert.ok(sqlCalls[4].sql.includes("DROP COLUMN string_type"));
+  assert.deepEqual([...columns], ["string"]);
+  await context.migrateWemosHistoryStrings(columns);
+  assert.equal(sqlCalls.length, 5);
+});
+
+test("existing unified String values only require removal of string_type", async () => {
+  const { context, sqlCalls } = createHarness();
+  const columns = new Set(["string", "string_type"]);
+  await context.migrateWemosHistoryStrings(columns);
+  assert.equal(sqlCalls.length, 1);
+  assert.equal(sqlCalls[0].sql, "ALTER TABLE wemos_lamp_state_history DROP COLUMN string_type");
+  await context.migrateWemosHistoryStrings(columns);
+  assert.equal(sqlCalls.length, 1);
+});
+
 function createHarness(command = null) {
   const sqlCalls = [];
   const events = [];
   const sent = [];
   const channel = {
     current_state: "OFF", input_state: "ON", last_source: "operator",
-    input_string: "sensor-data", output_string: "previous-command"
+    input_string: "sensor-data", output_string: "previous-command", last_changed_at: "2026-10-03 12:00:00.000"
   };
   const query = async (sql, params = []) => {
     sqlCalls.push({ sql, params });
@@ -81,6 +153,10 @@ test("firmware state preserves independent input, output and strings", async () 
   assert.equal(events[0].OutputSignal, "OS8");
   assert.equal(events[0].pin, undefined);
   assert.equal(events[0].inputPin, undefined);
+  const history = sqlCalls.find(call => call.sql.includes("INSERT INTO wemos_lamp_state_history"));
+  assert.equal(history.params[6], "sensor-8");
+  assert.equal(events[0].stringType, undefined);
+  assert.equal(events[0].String, "sensor-8");
 });
 
 test("firmware ACK without telemetry does not erase input state or IStr", async () => {
@@ -95,6 +171,10 @@ test("firmware ACK without telemetry does not erase input state or IStr", async 
   const update = sqlCalls.find(call => call.sql.includes("SET current_state=?,input_state=?"));
   assert.deepEqual(Array.from(update.params).slice(0, 5), ["ON", "ON", "operator", "sensor-data", "MOTOR_ON"]);
   assert.equal(events.find(event => event.type === "commandAck").status, "ACKED");
+  const history = sqlCalls.find(call => call.sql.includes("INSERT INTO wemos_lamp_state_history"));
+  assert.equal(history.params[6], "MOTOR_ON");
+  assert.equal(events.find(event => event.type === "stateChanged").stringType, undefined);
+  assert.equal(events.find(event => event.type === "stateChanged").String, "MOTOR_ON");
 });
 
 test("CLIENT state reports retain telemetry and empty strings", async () => {
@@ -205,11 +285,12 @@ test("unauthenticated queued messages cannot change device data", async () => {
   assert.equal(sqlCalls.length, 0);
 });
 
-function createUiHarness(viewOnly = false, channels = [8]) {
+function createUiHarness(viewOnly = false, channels = [8], channelOverrides = {}, deviceOverrides = {}) {
   const listeners = {};
   const nodes = {
     inputString: { textContent: "sensor" }, outputString: { textContent: "MOTOR_ON" },
-    inputState: { textContent: "OFF", dataset: {} }, outputState: { textContent: "OFF", dataset: {} }
+    inputState: { textContent: "OFF", dataset: {} }, outputState: { textContent: "OFF", dataset: {} },
+    lastSource: { textContent: "initial-operator" }, lastChangedAt: { textContent: "initial-time" }
   };
   const buttons = ["ON", "OFF"].map(state => ({
     dataset: { state }, active: state === "OFF", pressed: String(state === "OFF"),
@@ -231,6 +312,8 @@ function createUiHarness(viewOnly = false, channels = [8]) {
         if (selector.includes("data-active-output-string")) return [nodes.outputString];
         if (selector.includes("data-active-input-pin")) return [nodes.inputState];
         if (selector.includes("data-active-pin")) return [nodes.outputState];
+        if (selector.includes("data-active-last-source")) return [nodes.lastSource];
+        if (selector.includes("data-active-last-changed-at")) return [nodes.lastChangedAt];
         return [];
       },
       getElementById: () => root,
@@ -239,9 +322,10 @@ function createUiHarness(viewOnly = false, channels = [8]) {
     location: { pathname: viewOnly ? "/wemos-view.html" : "/wemos.html" },
     CSS: { escape: value => value }, console,
     fetch: async () => ({ ok: true, json: async () => [{
-      device_id: "WEMOS-D1-002", sets: channels.map(channel => ({
+      device_id: "WEMOS-D1-002", ...deviceOverrides, sets: channels.map(channel => ({
         Digital_input: `IS${channel}`, Degital_output: `OS${channel}`, input_signal: `IS${channel}`, output_signal: `OS${channel}`,
-        current_state: "OFF", input_state: "ON", input_string: "sensor", output_string: "MOTOR_ON"
+        current_state: "OFF", input_state: "ON", input_string: "sensor", output_string: "MOTOR_ON", last_source: "initial-operator",
+        last_changed_at: "2026-10-03 12:00:00.000", created_at: "2026-10-03 09:00:00.000", ...channelOverrides
       }))
     }] })
   });
@@ -258,6 +342,25 @@ test("channelString in browser leaves OStr unchanged", () => {
   assert.equal(nodes.outputString.textContent, "MOTOR_ON");
 });
 
+test("control cards show escaped device ID and name above every channel number", async () => {
+  const control = createUiHarness(false, [1, 2, 3, 4, 5, 6, 7, 8], {}, {
+    device_id: "DEVICE-TEST-001", device_name: "Line <A> & Machine"
+  });
+  const view = createUiHarness(true, [8], {}, { device_name: "View device" });
+  await new Promise(setImmediate);
+  const cards = [...control.root.innerHTML.matchAll(/<article\b[\s\S]*?<\/article>/g)].map(match => match[0]);
+  assert.equal(cards.length, 8);
+  for (const card of cards) {
+    const identity = card.indexOf('class="channel-device-identity"');
+    const channelNumber = card.indexOf('class="channel-number"');
+    assert.ok(identity >= 0 && identity < channelNumber);
+    assert.ok(card.includes("<code>DEVICE-TEST-001</code>"));
+    assert.ok(card.includes("<span>Line &lt;A&gt; &amp; Machine</span>"));
+    assert.equal(card.includes("Line <A> & Machine"), false);
+  }
+  assert.equal(view.root.innerHTML.includes("channel-device-identity"), false);
+});
+
 test("browser renders independent IS and OS states", async () => {
   const { listeners, nodes, root } = createUiHarness();
   listeners["wemos-state-update"]({ detail: {
@@ -272,7 +375,8 @@ test("browser renders independent IS and OS states", async () => {
   assert.ok(root.innerHTML.includes('data-command-output-string="OS8"'));
   assert.ok(root.innerHTML.includes("<span>IStr8: <code"));
   assert.ok(root.innerHTML.includes("<span>OStr8: <code"));
-  assert.ok(root.innerHTML.includes('aria-label="OStr8"'));
+  assert.ok(root.innerHTML.includes('aria-label="OStr8 ON"'));
+  assert.ok(root.innerHTML.includes('aria-label="OStr8 OFF"'));
 });
 
 test("string labels use actual channel numbers for all eight and reordered channels", async () => {
@@ -282,11 +386,128 @@ test("string labels use actual channel numbers for all eight and reordered chann
   for (const channel of [1, 2, 3, 4, 5, 6, 7, 8]) {
     assert.ok(allChannels.root.innerHTML.includes(`<span>IStr${channel}: <code`));
     assert.ok(allChannels.root.innerHTML.includes(`<span>OStr${channel}: <code`));
-    assert.ok(allChannels.root.innerHTML.includes(`aria-label="OStr${channel}"`));
+    assert.ok(allChannels.root.innerHTML.includes(`aria-label="OStr${channel} ON"`));
+    assert.ok(allChannels.root.innerHTML.includes(`aria-label="OStr${channel} OFF"`));
   }
   const labels = [...reorderedChannels.root.innerHTML.matchAll(/<span>([IO]Str[1-8]): <code/g)]
     .map(match => match[1]);
   assert.deepEqual(labels, ["IStr8", "OStr8", "IStr2", "OStr2"]);
+});
+
+test("channel header shows last source and IS/OS states share the signal row", async () => {
+  const { root } = createUiHarness();
+  await new Promise(setImmediate);
+  const header = root.innerHTML.slice(root.innerHTML.indexOf('class="channel-card-head"'), root.innerHTML.indexOf('class="signal-path"'));
+  assert.ok(header.includes("최근 변경"));
+  assert.ok(header.includes('data-active-last-source="OS8">initial-operator'));
+  assert.equal(header.includes("data-active-pin="), false);
+  const signalRow = root.innerHTML.slice(root.innerHTML.indexOf('class="signal-path"'), root.innerHTML.indexOf('class="signal-strings"'));
+  assert.ok(signalRow.includes('data-active-input-pin="IS8"'));
+  assert.ok(signalRow.includes('data-active-pin="OS8"'));
+  assert.ok(signalRow.includes('class="signal-pin">OS8</span>'));
+});
+
+test("control and view show separate IS/OS groups without arrows for every channel", async () => {
+  for (const viewOnly of [false, true]) {
+    const { root } = createUiHarness(viewOnly, [1, 2, 3, 4, 5, 6, 7, 8]);
+    await new Promise(setImmediate);
+    assert.equal([...root.innerHTML.matchAll(/class="signal-state-group"/g)].length, 16);
+    assert.equal(root.innerHTML.includes("signal-arrow"), false);
+    for (let channel = 1; channel <= 8; channel++) {
+      assert.ok(root.innerHTML.includes(`data-active-input-pin="IS${channel}"`));
+      assert.ok(root.innerHTML.includes(`data-active-pin="OS${channel}"`));
+    }
+  }
+});
+
+test("last change time is below source without a label and stays stable on repeated state reports", async () => {
+  const browser = createUiHarness();
+  await new Promise(setImmediate);
+  const header = browser.root.innerHTML.slice(browser.root.innerHTML.indexOf('class="output-readout channel-last-source"'), browser.root.innerHTML.indexOf('class="signal-path"'));
+  const sourcePosition = header.indexOf('data-active-last-source="OS8"');
+  const timePosition = header.indexOf('data-active-last-changed-at="OS8"');
+  assert.ok(timePosition > sourcePosition);
+  assert.ok(header.includes('data-active-last-changed-at="OS8">'));
+  assert.equal(header.includes("마지막 변경시간"), false);
+  const report = {
+    type: "stateChanged", deviceId: "WEMOS-D1-002", OutputSignal: "OS8", OutputState: "ON",
+    lastChangedAt: "2026-10-03T03:00:00.000Z"
+  };
+  browser.listeners["wemos-state-update"]({ detail: report });
+  const displayedTime = browser.nodes.lastChangedAt.textContent;
+  assert.ok(displayedTime.includes("12:00:00"));
+  browser.listeners["wemos-state-update"]({ detail: { ...report, type: "state", changedAt: "2026-10-03T04:00:00.000Z" } });
+  assert.equal(browser.nodes.lastChangedAt.textContent, displayedTime);
+  browser.listeners["wemos-state-update"]({ detail: { ...report, lastChangedAt: "2026-10-03 12:00:00.000" } });
+  assert.equal(browser.nodes.lastChangedAt.textContent, displayedTime);
+});
+
+test("server keeps actual last change time for unchanged output", async () => {
+  const { context, events, ws } = createHarness();
+  await context.handleWemosDeviceMessage(ws, {
+    type: "state", deviceId: ws.deviceId, OutputSignal: "OS8", OutputState: "OFF"
+  });
+  assert.equal(events[0].lastChangedAt, "2026-10-03 12:00:00.000");
+  await context.handleWemosDeviceMessage(ws, {
+    type: "state", deviceId: ws.deviceId, OutputSignal: "OS8", OutputState: "ON"
+  });
+  assert.equal(events[1].lastChangedAt, events[1].changedAt);
+});
+
+test("initial channel API shows time without waiting for a device state event", async () => {
+  const browser = createUiHarness();
+  await new Promise(setImmediate);
+  assert.ok(browser.root.innerHTML.includes('data-active-last-changed-at="OS8">2026-10-03 12:00:00</time>'));
+  assert.equal(browser.nodes.lastChangedAt.textContent, "2026-10-03 12:00:00");
+  assert.ok(browser.root.innerHTML.includes("최근 변경"));
+  assert.equal(browser.root.innerHTML.includes("마지막 변경자"), false);
+});
+
+test("initial channel with no history uses creation time and missing socket time cannot erase it", async () => {
+  const browser = createUiHarness(false, [8], { last_changed_at: null });
+  browser.listeners["wemos-state-update"]({ detail: {
+    type: "state", deviceId: "WEMOS-D1-002", OutputSignal: "OS8", OutputState: "OFF", lastChangedAt: null
+  } });
+  await new Promise(setImmediate);
+  assert.equal(browser.nodes.lastChangedAt.textContent, "2026-10-03 09:00:00");
+  browser.listeners["wemos-state-update"]({ detail: {
+    type: "wemosSnapshot", state: { device_id: "WEMOS-D1-002", channels: [{
+      Degital_output: "OS8", current_state: "OFF", last_changed_at: null
+    }] }
+  } });
+  assert.equal(browser.nodes.lastChangedAt.textContent, "2026-10-03 09:00:00");
+});
+
+test("initial API preserves a newer device change received before rendering", async () => {
+  const browser = createUiHarness();
+  browser.listeners["wemos-state-update"]({ detail: {
+    type: "stateChanged", deviceId: "WEMOS-D1-002", OutputSignal: "OS8", OutputState: "ON",
+    source: "new-operator", changedAt: "2026-10-03T04:00:00.000Z"
+  } });
+  await new Promise(setImmediate);
+  assert.equal(browser.nodes.lastChangedAt.textContent, "2026-10-03 13:00:00");
+  assert.equal(browser.nodes.lastSource.textContent, "new-operator");
+  assert.equal(browser.nodes.outputState.textContent, "ON");
+});
+
+test("last source updates from device state and snapshot, not queued commands", async () => {
+  const { listeners, nodes } = createUiHarness();
+  await new Promise(setImmediate);
+  listeners["wemos-state-update"]({ detail: {
+    type: "stateChanged", deviceId: "WEMOS-D1-002", OutputSignal: "OS8", OutputState: "ON", source: "operator-8"
+  } });
+  assert.equal(nodes.lastSource.textContent, "operator-8");
+  listeners["wemos-state-update"]({ detail: {
+    type: "commandQueued", deviceId: "WEMOS-D1-002", OutputSignal: "OS8", state: "OFF", requester: "pending-operator"
+  } });
+  assert.equal(nodes.lastSource.textContent, "operator-8");
+  listeners["wemos-state-update"]({ detail: {
+    type: "wemosSnapshot", state: { device_id: "WEMOS-D1-002", channels: [{
+      Degital_output: "OS8", Digital_input: "IS8", current_state: "OFF", last_source: "snapshot-operator"
+    }] }
+  } });
+  assert.equal(nodes.lastSource.textContent, "snapshot-operator");
+  assert.equal(nodes.outputState.textContent, "OFF");
 });
 
 test("control sends OStr with output command; view-only has no command field", async () => {
@@ -305,6 +526,30 @@ test("control sends OStr with output command; view-only has no command field", a
   await new Promise(setImmediate);
   assert.equal(view.root.innerHTML.includes("data-command-output-string"), false);
   assert.equal(view.root.innerHTML.includes("data-active-command"), false);
+});
+
+test("each channel renders two OStr inputs and each button sends its own text", async () => {
+  const { root, listeners, commands } = createUiHarness(false, [1, 2, 3, 4, 5, 6, 7, 8]);
+  await new Promise(setImmediate);
+  assert.equal([...root.innerHTML.matchAll(/data-command-output-string=/g)].length, 16);
+  for (let channel = 1; channel <= 8; channel++) {
+    for (const state of ["ON", "OFF"]) {
+      assert.ok(root.innerHTML.includes(`data-command-output-string="OS${channel}" data-command-state="${state}"`));
+      const fields = { ON: { value: `MOTOR_${channel}_ON` }, OFF: { value: `MOTOR_${channel}_OFF` } };
+      const button = {
+        dataset: { deviceId: "WEMOS-D1-002", pin: `OS${channel}`, state },
+        closest: () => ({ querySelector: selector => {
+          const selectedState = /data-command-state="(ON|OFF)"/.exec(selector)?.[1];
+          return fields[selectedState] || null;
+        } })
+      };
+      listeners.click({ target: { closest: () => button } });
+      const command = commands.at(-1);
+      assert.equal(command.OutputSignal, `OS${channel}`);
+      assert.equal(command.severSignal, state);
+      assert.equal(command.OStr, `MOTOR_${channel}_${state}`);
+    }
+  }
 });
 
 test("empty OStr command preserves the firmware's previous output string", async () => {
@@ -405,24 +650,46 @@ test("device ACK supports OutputState without a legacy state field", async () =>
 
 function createFirmwareLogicHarness() {
   let time = 0;
+  let pendingLine = "";
+  const lines = [];
   const context = vm.createContext({
     millis: () => time,
-    Serial: { print: () => {}, println: () => {} },
-    printOutputStatus: () => {}
+    Serial: {
+      print: value => { pendingLine += String(value ?? ""); },
+      println: value => { lines.push(pendingLine + String(value ?? "")); pendingLine = ""; }
+    }
   });
   const firmware = fs.readFileSync(path.join(__dirname, "..", "wemos", "WEMOSD1R1.ino"), "utf8");
-  for (const name of ["applyOutputState", "handleInputSignal"]) {
+  for (const name of ["printOutputStatus", "applyOutputState", "handleInputSignal"]) {
     const signature = new RegExp(`void ${name}\\([^)]*\\)\\s*\\{`).exec(firmware);
     assert.ok(signature, `${name} definition missing`);
     const end = firmware.indexOf("\n}", signature.index + signature[0].length);
     assert.ok(end > signature.index);
     const body = firmware.slice(signature.index + signature[0].length, end)
       .replace(/\/\/[^\r\n]*/g, "").replace(/\bbool\s+/g, "let ");
-    const parameters = name === "applyOutputState" ? "channel, desiredState, source" : "channel";
+    const parameters = name === "applyOutputState" ? "channel, desiredState, source"
+      : name === "printOutputStatus" ? "channel, source" : "channel";
     vm.runInContext(`function ${name}(${parameters}) { ${body} }`, context);
   }
-  return { context, setTime: value => { time = value; } };
+  return { context, lines, setTime: value => { time = value; } };
 }
+
+test("serial status logs distinguish requested state from actual input and output", () => {
+  const { context, lines } = createFirmwareLogicHarness();
+  for (let channel = 1; channel <= 8; channel++) {
+    context.printOutputStatus({
+      inputSignal: `IS${channel}`, outputSignal: `OS${channel}`,
+      inputState: true, outputState: false, severSignal: true
+    }, "CLIENT");
+    assert.equal(lines.at(-1), `[STATUS] InputSignal=IS${channel} inputState=ON | OutputSignal=OS${channel} OutputState=OFF | severSignal=ON | source=CLIENT`);
+  }
+});
+
+test("serial string logs use IStr for input strings and OStr for received output strings", () => {
+  const firmware = fs.readFileSync(path.join(__dirname, "..", "wemos", "WEMOSD1R1.ino"), "utf8");
+  assert.match(firmware, /Serial\.print\("\[STRING TX\] IStr"\);\s*Serial\.print\(channel\.inputSignal \+ 2\);/);
+  assert.match(firmware, /Serial\.print\("\[STRING RX\] OStr"\);\s*Serial\.print\(channel->outputSignal \+ 2\);/);
+});
 
 test("firmware input debounce drives output and schedules reports for all eight channels", () => {
   const { context, setTime } = createFirmwareLogicHarness();
