@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>KIMS FACTORIES V1.0</title>
+	<link rel="stylesheet" href="/style.css?v=20261005-2">
+	<script src="/page-settings.js?v=20261005-4" defer></script>
+	<script src="/user-logout.js?v=20260930-1" defer></script>
+</head>
+
+<body class="device-page">
+	<main class="device-shell">
+		<header class="device-header">
+			<div class="device-heading">
+				<p class="device-eyebrow"></p>
+				<h1>장치 제어</h1>
+			</div>
+			<nav class="device-page-links" aria-label="Device 페이지">
+				<!-- <a class="device-dashboard-link" href="/">생산 현황</a> -->
+				<a class="link" href="/">생산 현황</a>
+				<a class="link" href="/device-view.html">Device 보기</a>
+				<a class="link" href="/device_schedule.html">예약 관리</a>
+				<a id="deviceAdminLink" class="link" href="/device-admin.html">Device 관리</a>
+				<a id="profileLink" class="link" href="/user-profile.html">회원정보</a>
+				<button class="logout-button" onclick="logout()">로그아웃</button>
+			</nav>
+		</header>
+		<section class="channel-section" aria-labelledby="channel-title">
+			<div class="section-heading">
+				<p class="section-note">IS는 디바이스 입력 변수(bool), OS는 디바이스 출력 변수(Bool)입니다. </p>
+			</div>
+			<div class="channel-grid" hidden>
+				<article class="channel-card channel-d8">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 01</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="stateD8" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD8"
+							class="output-button" type="button" disabled
+							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="offD8"
+							class="output-button" type="button" disabled
+							aria-pressed="true"><span>OFF</span><small>끄기</small></button></div>
+				</article>
+				<article class="channel-card channel-d9">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 02</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="state" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="on"
+							class="output-button" type="button" disabled
+							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="off"
+							class="output-button" type="button" disabled
+							aria-pressed="true"><span>OFF</span><small>끄기</small></button></div>
+				</article>
+				<article class="channel-card channel-d10">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 03</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="stateD10" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD10"
+							class="output-button" type="button" disabled
+							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="offD10"
+							class="output-button" type="button" disabled
+							aria-pressed="true"><span>OFF</span><small>끄기</small></button></div>
+				</article>
+				<article class="channel-card channel-d11">
+					<div class="channel-card-head">
+						<div><span class="channel-number">CHANNEL 04</span>
+							<h3>OS</h3>
+						</div>
+						<div class="output-readout"><span>현재 OS 상태</span><b id="stateD11" class="pin-state"
+								data-state="OFF">OFF</b></div>
+					</div>
+					<div class="signal-path"><span class="signal-pin">IS</span><span>입력 신호</span><span
+							class="signal-arrow" aria-hidden="true">→</span><strong>OS 출력 신호</strong></div>
+					<div class="channel-actions" role="group" aria-label="OS 출력 조작"><button id="onD11"
+							class="output-button" type="button" disabled
+							aria-pressed="false"><span>ON</span><small>켜기</small></button><button id="offD11"
+							class="output-button" type="button" disabled
+							aria-pressed="true"><span>OFF</span><small>끄기</small></button></div>
+				</article>
+			</div>
+			<div id="activeDeviceWindows" class="active-device-windows">
+				<p class="empty-state">활성 Device 장치를 불러오는 중입니다.</p>
+			</div>
+
+		</section>
+		<section class="history-section" aria-labelledby="history-title">
+			<div class="section-heading">
+				<div>
+					<p class="device-eyebrow">ACTIVITY</p>
+					<h2 id="history-title">최근 상태 변경</h2>
+				</div>
+			</div>
+			<div class="table-wrap">
+				<table class="device-table device-history-table">
+					<thead>
+						<tr>
+							<th>시간</th>
+							<th>장치</th>
+							<th>변수</th>
+							<th>현재</th>
+							<th>문자열</th>
+							<th>출처</th>
+						</tr>
+					</thead>
+					<tbody id="history"></tbody>
+				</table>
+			</div>
+		</section>
+
+	</main>
+	<script src="/device-control.js?v=20261005-3"></script>
+	<script src="/device-active.js?v=20260929-8"></script>
+</body>
+
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="/style.css?v=20261010-schedule">
+  <script src="/page-settings.js" defer></script><script src="/user-logout.js" defer></script>
+  <script src="/device-schedule.js" defer></script>
+</head>
+<body class="device-page schedule-page">
+<main class="device-shell">
+  <header class="device-header">
+    <div class="device-heading"><p class="device-eyebrow"></p><h1>예약 관리</h1></div>
+    <nav class="device-page-links" aria-label="Device 페이지">
+      <a class="link" href="/">생산 현황</a><a class="link" href="/device-control.html">Device 제어</a>
+      <a class="link" href="/device-view.html">Device 보기</a>
+      <a class="link" href="/device-admin.html">Device 관리</a><a id="profileLink" class="link" href="/user-profile.html">회원정보</a>
+      <button class="logout-button" onclick="logout()">로그아웃</button>
+    </nav>
+  </header>
+  <section class="history-section schedule-admin-section">
+    <div class="section-heading"><h2 id="scheduleFormTitle">새 예약 등록</h2><p class="section-note">모든 디바이스와 출력 채널의 예약을 통합 관리합니다.</p></div>
+    <form id="scheduleForm" class="schedule-admin-form">
+      <input type="hidden" name="schedule_id">
+      <label>디바이스<select name="device_id" id="scheduleDevice" required><option value="">디바이스 선택</option></select></label>
+      <label>출력 채널<select name="output_signal" id="scheduleChannel" required><option value="">채널 선택</option></select></label>
+      <label>예약 이름<input name="schedule_name" maxlength="150" placeholder="예: 야간 조명 끄기"></label>
+      <label>실행 동작<select name="action_state"><option value="ON">ON</option><option value="OFF">OFF</option></select></label>
+      <label>반복 유형<select name="repeat_type" id="repeatType"><option value="ONCE">1회</option><option value="HOURLY">매시간</option><option value="DAILY">매일</option><option value="WEEKLY">반복 요일</option><option value="MONTHLY">매월</option><option value="YEARLY">매년</option></select></label>
+      <label data-field="schedule_time">실행 시각<input name="schedule_time" type="datetime-local" required></label>
+      <fieldset class="schedule-weekdays" data-field="weekdays" hidden><legend>반복 요일</legend>
+        <label><input type="checkbox" name="weekdays" value="0">일</label><label><input type="checkbox" name="weekdays" value="1">월</label><label><input type="checkbox" name="weekdays" value="2">화</label><label><input type="checkbox" name="weekdays" value="3">수</label><label><input type="checkbox" name="weekdays" value="4">목</label><label><input type="checkbox" name="weekdays" value="5">금</label><label><input type="checkbox" name="weekdays" value="6">토</label>
+      </fieldset>
+      <label data-field="is_month_end" hidden class="schedule-checkbox"><input name="is_month_end" type="checkbox"> 매월 말일</label>
+      <label class="schedule-wide">OStr 전송 문자열<textarea name="ostr_payload" rows="2" maxlength="10000" placeholder="예약 실행 시 장치로 전달할 출력 문자열"></textarea></label>
+      <label class="schedule-checkbox"><input name="is_enabled" type="checkbox" checked> 예약 활성화</label>
+      <div class="schedule-form-actions schedule-wide"><button type="submit" id="scheduleSubmit" class="output-button admin-submit">예약 등록</button><span id="scheduleValidationMessage" class="schedule-message" role="status" aria-live="polite"></span><button type="button" id="scheduleCancel" hidden>수정 취소</button><span id="scheduleMessage" role="status" aria-live="polite"></span></div>
+    </form>
+  </section>
+  <section class="history-section schedule-table-section">
+    <div class="section-heading"><h2>전체 예약 현황 <span id="scheduleCount" class="admin-device-count">0건</span></h2><p class="section-note">컬럼별 필터와 정렬을 조합하여 예약을 검색할 수 있습니다.</p></div>
+    <div class="schedule-filters">
+      <label>통합 검색<input id="filterSearch" type="search" placeholder="예약자, 장치, 채널, OStr 검색"></label>
+      <label>예약자<select id="filterOwner"><option value="">전체 예약자</option></select></label>
+      <label>디바이스<select id="filterDevice"><option value="">전체 디바이스</option></select></label>
+      <label>채널<select id="filterChannel"><option value="">전체 채널</option></select></label>
+      <label>동작<select id="filterAction"><option value="">ON/OFF 전체</option><option>ON</option><option>OFF</option></select></label>
+      <label>반복<select id="filterRepeat"><option value="">반복 전체</option><option value="ONCE">1회</option><option value="HOURLY">매시간</option><option value="DAILY">매일</option><option value="WEEKLY">반복 요일</option><option value="MONTHLY">매월</option><option value="YEARLY">매년</option></select></label>
+      <label>활성 상태<select id="filterEnabled"><option value="">전체</option><option value="1">활성</option><option value="0">비활성/완료</option></select></label>
+      <label>예약일 시작<input id="filterStart" type="date"></label><label>예약일 종료<input id="filterEnd" type="date"></label>
+      <label>정렬 기준<select id="sortBy"><option value="time">다음 실행 시각</option><option value="owner">예약자</option><option value="device">디바이스</option><option value="channel">채널</option><option value="action">동작</option><option value="repeat">반복 유형</option><option value="created">등록 시각</option><option value="status">실행 결과</option></select></label>
+      <label>정렬 순서<select id="sortOrder"><option value="asc">오름차순</option><option value="desc">내림차순</option></select></label>
+      <button type="button" id="resetFilters">필터 초기화</button>
+    </div>
+    <div class="schedule-table-wrap" tabindex="0" aria-label="예약 목록 테이블">
+      <table class="schedule-table"><thead><tr><th>ID</th><th>예약자</th><th>디바이스</th><th>채널</th><th>동작</th><th>OStr 문자열</th><th>반복</th><th>다음 실행 시각</th><th>상태</th><th>마지막 실행</th><th>등록 시각</th><th>관리</th></tr></thead><tbody id="scheduleRows"><tr><td colspan="12">예약 정보를 불러오는 중입니다.</td></tr></tbody></table>
+    </div><p class="schedule-table-note">표시 시각은 한국 표준시(KST) 기준입니다. 명령 큐 등록과 실제 출력 상태 변경은 구분하여 기록합니다.</p>
+  </section>
+</main>
+</body></html>
