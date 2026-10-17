@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="style.css?v=20261015-product-control-button-style">
+  <link rel="stylesheet" href="/product-quantity.css?v=1">
+  <script src="/page-settings.js?v=20261016-product-admin7" defer></script>
+</head>
+
+<body class="product-quantity-page">
+  <header>
+    <div class="product-heading">
+      <p class="product-eyebrow"></p>
+      <h1>생산 입력</h1>
+      <p id="connection" class="help-text" role="status">서버 연결 중...</p>
+    </div>
+
+    <div class="header-actions">
+      <span id="userInfo" class="user-info">로그인 확인 중...</span>
+      <a class="link" href="/">생산 현황</a>
+      <a id="productChannelLink" class="link" href="/product-channel-link.html" style="display:none">제품-채널 연결</a>
+      <a id="productAdminLink" class="link" href="/product-admin.html" style="display:none">제품 관리</a>
+      <a class="link" href="/product-report.html">제품 리포트</a>
+      <a class="link" href="/device-view.html">Device 보기</a>
+      <a class="link" href="/device-control.html">Device 제어</a>
+      <a id="profileLink" class="link" href="/user-profile.html">회원정보</a>
+      <button class="logout-button" onclick="logout()">로그아웃</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-title">
+        <h2>작업 수량 입력</h2>
+        <span>입력한 수량이 작업수량과 누적 수량에 더해집니다.</span>
+      </div>
+      <div id="controls" class="control-grid"></div>
+    </section>
+  </main>
+
+  <script src="/product-control.js?v=20261017-production-signed-increment"></script>
+</body>
+
+</html>

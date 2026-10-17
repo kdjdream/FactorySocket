@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="style.css?v=20261015-product-admin-button-style">
+  <link rel="stylesheet" href="/product-quantity.css?v=1">
+  <script src="/page-settings.js?v=20261016-product-admin7" defer></script>
+</head>
+
+<body class="product-quantity-page product-admin-page">
+  <header>
+    <div class="product-heading">
+      <p class="product-eyebrow"></p>
+      <h1>제품 관리</h1>
+    </div>
+    <div class="header-actions"><a class="link" href="/">생산 현황</a>
+      <a class="link" href="/product-control.html">생산 입력</a>
+      <a class="link" href="/product-report.html">제품 리포트</a>
+      <a class="link" href="/device-view.html">Device 보기</a>
+      <a id="profileLink" class="link" href="/user-profile.html">회원정보</a>
+      <button class="logout-button" onclick="logout()">로그아웃</button>
+    </div>
+  </header>
+  <main>
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2 id="addFormTitle">새로운 제품코드 추가</h2>
+          <p id="addFormHelp" class="help-text">제품코드, 제품명, 목표수량을 입력하세요.</p>
+        </div>
+      </div>
+      <form id="addForm" class="form-grid product-add-form">
+        <div><label>제품코드 *</label><input id="newCode" maxlength="50" required
+            style="padding: 13px 12px; font-size: 16px;"></div>
+        <div><label>제품명 *</label><input id="newName" maxlength="100" required
+            style="padding: 13px 12px; font-size: 16px;"></div>
+        <div><label for="newQuantity">누적 수량 *</label><input id="newQuantity" type="number" min="0" max="2147483647" step="1" value="0" required
+          style="padding: 13px 12px; font-size: 16px;"></div>
+        <div><label for="newWorkQuantity">작업 수량 *</label><input id="newWorkQuantity" type="number" min="0" max="2147483647" step="1" value="0" required
+            style="padding: 13px 12px; font-size: 16px;"></div>
+        <div><label>목표수량 *</label><input id="newTarget" type="number" min="0" step="1" required
+            style="padding: 13px 12px; font-size: 16px;"></div>
+        <div><label>상태 *</label><select id="newStatus" required style="padding: 13px 12px; font-size: 16px;">
+            <option value="대기">대기</option>
+            <option value="생산중">생산중</option>
+            <option value="수리중">수리중</option>
+            <option value="완료">완료</option>
+            <option value="정지">정지</option>
+          </select></div>
+        <div class="full">
+          <label for="newReason">등록 / 수정 사유 *</label>
+          <input id="newReason" type="text" maxlength="500" required>
+        </div>
+        <div class="full">
+          <button id="addFormSubmit" class="output-button admin-submit admin-form-action-button" type="submit">제품 추가 등록</button>
+          <button id="cancelProductEdit" class="output-button admin-submit admin-form-action-button" type="button" hidden>수정 취소</button>
+        </div>
+      </form>
+      <p id="addMessage" class="auth-message"></p>
+    </section>
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2>제품 목록 수정</h2>
+          <p class="help-text">제품을 수정·삭제하고, 사용 여부를 설정하거나 행을 드래그해 순서를 변경할 수 있습니다.</p>
+        </div><button class="output-button admin-submit admin-form-action-button" onclick="loadProducts()">새로고침</button>
+      </div>
+      <div class="table-wrap">
+        <table class="admin-table product-edit-table product-admin-list">
+          <thead>
+            <tr>
+              <th>순위</th>
+              <th>ID</th>
+              <th>제품코드</th>
+              <th>제품명</th>
+              <th>누적 수량</th>
+              <th>작업 수량</th>
+              <th>목표수량</th>
+              <th>상태</th>
+              <th>사용</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="productTable"></tbody>
+        </table>
+      </div>
+      <p id="emptyMessage" class="help-text hidden">등록된 제품이 없습니다.</p>
+    </section>
+  </main>
+  <script>
+    // 제품 관리: 목록에서 선택한 제품을 상단 폼에서 수정하고, 저장 후 서버 목록을 다시 읽습니다.
+    let products = [];
+    let editingProductId = null;
+    let draggedProductRow = null;
+    const table = document.getElementById('productTable');
+    function h(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;'); }
+    function statusText(status) { return { 생산중: '생산중', 수리중: '수리중', 완료: '완료', 대기: '대기', 정지: '정지' }[status] || status; }
+    function message(id, text, type) { const element = document.getElementById(id); element.textContent = text; element.className = `auth-message ${type || ''}`; }
+
+    async function loadProducts() {
+      const res = await fetch('/api/admin/products');
+      if (res.status === 401) { location.href = '/user-login.html'; return; }
+      if (res.status === 403) { alert('7등급 이상 관리자 권한이 필요합니다.'); location.href = '/'; return; }
+      if (!res.ok) { message('addMessage', '제품 목록을 불러오지 못했습니다.', 'error'); return; }
+      products = await res.json();
+      document.getElementById('emptyMessage').classList.toggle('hidden', products.length > 0);
+      table.innerHTML = products.map((product, index) => {
+        const enabled = Number(product.is_enabled) === 1;
+        return `<tr class="product-order-row${enabled ? '' : ' is-inactive'}" data-product-id="${product.id}" draggable="true"><td class="product-order-position">${index + 1}</td><td>${product.id}</td><td>${h(product.product_code)}</td><td>${h(product.product_name)}</td><td>${product.quantity}</td><td>${product.work_quantity ?? product.quantity}</td><td>${product.target_quantity}</td><td>${h(statusText(product.status))}</td><td><span class="device-state ${enabled ? 'is-active' : 'is-inactive'}">${enabled ? '사용' : '중지'}</span></td><td class="admin-actions"><button class="output-button ${enabled ? 'admin-danger' : 'admin-submit'} product-enabled-toggle" onclick="toggleProductEnabled(${product.id}, ${!enabled})">${enabled ? '사용 중지' : '사용 설정'}</button><button onclick="editProduct(${product.id})">수정</button><button onclick="deleteProduct(${product.id})">삭제</button></td></tr>`;
+      }).join('');
+    }
+
+    async function toggleProductEnabled(id, isEnabled) {
+      const product = products.find(item => Number(item.id) === Number(id));
+      if (!product) return;
+
+      const res = await fetch(`/api/admin/products/${id}/active`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isEnabled })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || '제품 사용 상태 변경에 실패했습니다.');
+        await loadProducts();
+        return;
+      }
+      await loadProducts();
+    }
+
+    async function saveProductOrder() {
+      const rows = Array.from(table.querySelectorAll('tr[data-product-id]'));
+      const productIds = rows.map(row => Number(row.dataset.productId));
+      const res = await fetch('/api/admin/products/order', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productIds })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || '제품 순서를 저장하지 못했습니다.');
+        await loadProducts();
+        return;
+      }
+
+      products = productIds.map(id => products.find(product => Number(product.id) === id)).filter(Boolean);
+      rows.forEach((row, index) => {
+        row.querySelector('.product-order-position').textContent = String(index + 1);
+      });
+    }
+
+    table.addEventListener('dragstart', event => {
+      const row = event.target.closest('tr[data-product-id]');
+      if (!row || event.target.closest('button, input, label')) {
+        event.preventDefault();
+        return;
+      }
+      draggedProductRow = row;
+      row.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', row.dataset.productId);
+    });
+
+    table.addEventListener('dragover', event => {
+      if (!draggedProductRow) return;
+      const targetRow = event.target.closest('tr[data-product-id]');
+      if (!targetRow || targetRow === draggedProductRow) return;
+      event.preventDefault();
+      const insertAfter = event.clientY > targetRow.getBoundingClientRect().top + targetRow.offsetHeight / 2;
+      table.insertBefore(draggedProductRow, insertAfter ? targetRow.nextElementSibling : targetRow);
+    });
+
+    table.addEventListener('drop', async event => {
+      if (!draggedProductRow) return;
+      event.preventDefault();
+      draggedProductRow.classList.remove('is-dragging');
+      draggedProductRow = null;
+      await saveProductOrder();
+    });
+
+    table.addEventListener('dragend', () => {
+      draggedProductRow?.classList.remove('is-dragging');
+      draggedProductRow = null;
+    });
+
+    function editProduct(id) {
+      const product = products.find(item => Number(item.id) === Number(id));
+      if (!product) return;
+
+      editingProductId = Number(product.id);
+      document.getElementById('newCode').value = product.product_code;
+      document.getElementById('newCode').disabled = true;
+      document.getElementById('newName').value = product.product_name;
+      document.getElementById('newQuantity').value = product.quantity;
+      document.getElementById('newWorkQuantity').value = product.work_quantity ?? product.quantity;
+      document.getElementById('newReason').value = '';
+      document.getElementById('newTarget').value = product.target_quantity;
+      document.getElementById('newStatus').value = product.status;
+      document.getElementById('addFormTitle').textContent = '제품 수정';
+      document.getElementById('addFormHelp').textContent = '제품코드는 변경할 수 없습니다. 나머지 정보를 수정한 뒤 저장하세요.';
+      document.getElementById('addFormSubmit').textContent = '수정 저장';
+      document.getElementById('cancelProductEdit').hidden = false;
+      document.getElementById('addForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function resetProductForm() {
+      editingProductId = null;
+      document.getElementById('addForm').reset();
+      document.getElementById('newCode').disabled = false;
+      document.getElementById('addFormTitle').textContent = '새로운 제품코드 추가';
+      document.getElementById('addFormHelp').textContent = '제품코드, 제품명, 목표수량을 입력하세요.';
+      document.getElementById('addFormSubmit').textContent = '제품 추가 등록';
+      document.getElementById('cancelProductEdit').hidden = true;
+    }
+
+    async function deleteProduct(id) {
+      if (!confirm('이 제품을 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.')) return;
+      const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || '제품 삭제에 실패했습니다.'); return; }
+      if (editingProductId === Number(id)) resetProductForm();
+      await loadProducts();
+    }
+
+    document.getElementById('addForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const isEditing = editingProductId !== null;
+      const endpoint = isEditing ? `/api/admin/products/${editingProductId}` : '/api/admin/products';
+      const res = await fetch(endpoint, { method: isEditing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ productCode: newCode.value, productName: newName.value, quantity: newQuantity.value, workQuantity: newWorkQuantity.value, targetQuantity: newTarget.value, reason: newReason.value, status: newStatus.value }) });
+      const data = await res.json();
+      if (!res.ok) { message('addMessage', data.error || (isEditing ? '제품 수정에 실패했습니다.' : '제품 추가에 실패했습니다.'), 'error'); return; }
+      resetProductForm();
+      message('addMessage', isEditing ? '제품이 수정되었습니다.' : '제품이 추가되었습니다.', 'success');
+      await loadProducts();
+    });
+
+    document.getElementById('cancelProductEdit').addEventListener('click', () => {
+      resetProductForm();
+      message('addMessage', '수정이 취소되었습니다.', '');
+    });
+
+    async function logout() { await fetch('/api/logout', { method: 'POST' }); location.href = '/user-login.html?logged_out=1'; }
+    loadProducts();
+  </script>
+</body>
+
+</html>

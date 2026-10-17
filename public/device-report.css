@@ -1,0 +1,244 @@
+.report-page {
+  --report-on: #087a67;
+  --report-off: #326d9c;
+  --report-unknown: #a66b10;
+}
+.report-filters {
+  padding: 24px 0;
+  border-top: 1px solid var(--factory-line);
+  border-bottom: 1px solid var(--factory-line);
+}
+.report-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.3fr) repeat(2, minmax(180px, 1fr)) auto;
+  align-items: end;
+  gap: 16px;
+}
+.report-filter-grid label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+.report-filter-grid input,
+.report-filter-grid select {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 8px;
+  border: 1px solid var(--factory-line);
+  border-radius: 4px;
+  font: inherit;
+  color: inherit;
+  background: var(--factory-surface);
+}
+.report-filter-grid button {
+  min-height: 44px;
+}
+.product-report-filter-grid {
+  grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+}
+.product-report-page .device-heading > .device-eyebrow::before {
+  content: "PRODUCT REPORT";
+}
+.report-channel-fieldset {
+  padding: 0;
+  margin: 24px 0 0;
+  border: 0;
+  min-width: 0;
+}
+.report-channel-fieldset legend {
+  padding: 0 0 12px;
+  font-weight: 600;
+}
+.report-select-all,
+.report-channel-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.report-channel-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin-top: 16px;
+}
+.report-page input[type="checkbox"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--report-on);
+}
+.report-result-toolbar,
+.report-channel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.report-result-toolbar {
+  margin-top: 28px;
+}
+.report-result-toolbar h2,
+.report-channel-heading h3 {
+  margin: 0;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+.report-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.report-page button {
+  cursor: pointer;
+  font: inherit;
+  white-space: normal;
+}
+.report-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.report-message,
+.report-period,
+.report-data-warning {
+  line-height: 1.6;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.report-message[data-error="true"],
+.report-data-warning {
+  color: var(--factory-amber);
+}
+.report-period {
+  color: var(--factory-muted);
+}
+.report-channel {
+  padding: 32px 0;
+  border-top: 3px solid #718a82;
+}
+#reportResults > .report-channel + .report-channel {
+  margin-top: 24px;
+}
+.report-channel-heading > div {
+  min-width: 0;
+}
+.report-channel-heading small {
+  display: block;
+  margin-top: 6px;
+  color: var(--factory-muted);
+}
+.report-statistics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px 24px;
+  margin: 24px 0;
+}
+.report-statistics div {
+  border-left: 3px solid var(--factory-line);
+  padding-left: 12px;
+  min-width: 0;
+}
+.report-statistics div[data-analysis="onCount"],
+.report-statistics div[data-analysis="onTime"] {
+  border-color: var(--report-on);
+}
+.report-statistics div[data-analysis="offCount"],
+.report-statistics div[data-analysis="offTime"] {
+  border-color: var(--report-off);
+}
+.report-statistics dt {
+  font-size: 13px;
+  color: var(--factory-muted);
+  margin-bottom: 8px;
+}
+.report-statistics dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.report-plot {
+  position: relative;
+  height: 220px;
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 24px;
+}
+.report-plot canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+.report-channel h4 {
+  margin: 20px 0 12px;
+  font-size: 14px;
+}
+.report-pdf-export {
+  position: absolute;
+  top: 0;
+  left: -12000px;
+  width: 1000px;
+  padding: 24px;
+  background: #fff;
+  color: #182b2a;
+  --factory-line: #d9e2df;
+  --factory-muted: #657572;
+  --factory-amber: #a66b10;
+}
+.report-pdf-export .report-channel {
+  padding: 0;
+  border: 0;
+  background: #fff;
+}
+.report-pdf-export p {
+  overflow-wrap: anywhere;
+}
+.report-pdf-export h2 {
+  font-size: 22px;
+}
+.report-pdf-export img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.report-pdf-export .report-statistics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.report-pdf-export .report-statistics dd {
+  font-size: 17px;
+}
+@media (max-width: 1000px) {
+  .report-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .report-filter-grid,
+  .product-report-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .report-channel-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-statistics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px 12px;
+  }
+  .report-statistics dd {
+    font-size: 17px;
+  }
+  .report-actions {
+    width: 100%;
+  }
+  .report-actions button {
+    flex: 1 1 150px;
+  }
+}

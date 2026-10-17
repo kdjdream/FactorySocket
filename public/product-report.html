@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="/style.css?v=20261015-device-enabled-state">
+  <link rel="stylesheet" href="/device-report.css?v=6">
+  <script src="/page-settings.js?v=20261016-product-admin7" defer></script>
+  <script src="/user-logout.js?v=20260930-1" defer></script>
+  <script src="/vendor/chart.umd.js" defer></script>
+  <script src="/vendor/jspdf.umd.min.js" defer></script>
+  <script src="/vendor/html2canvas.min.js" defer></script>
+  <script src="/product-report.js?v=9" defer></script>
+</head>
+<body class="device-page report-page product-report-page">
+  <main class="device-shell">
+    <header class="device-header">
+      <div class="device-heading"><p class="device-eyebrow"></p><h1>제품별 현황 리포트</h1></div>
+      <nav class="device-page-links" aria-label="제품 페이지">
+        <a class="link" href="/">생산 현황</a>
+        <a class="link" href="/product-control.html">생산 입력</a>
+        <a class="link" href="/product-admin.html">제품 관리</a>
+        <a class="link" href="/device-report.html">Device 리포트</a>
+        <a class="link" href="/user-profile.html">회원정보</a>
+        <button class="logout-button" onclick="logout()">로그아웃</button>
+      </nav>
+    </header>
+    <section class="report-filters" aria-label="제품 리포트 조회 조건">
+      <form id="productReportForm">
+        <div class="report-filter-grid product-report-filter-grid">
+          <label><span>시작 일시 (KST)<span id="productStartWeekday" aria-live="polite"></span></span><input id="productReportStart" type="datetime-local" required></label>
+          <label><span>종료 일시 (KST)<span id="productEndWeekday" aria-live="polite"></span></span><input id="productReportEnd" type="datetime-local" required></label>
+          <button id="productReportSubmit" class="output-button" type="submit" disabled>리포트 조회</button>
+        </div>
+        <fieldset class="report-channel-fieldset">
+          <legend>분석 수량 기준</legend>
+          <div class="report-channel-options">
+            <label><input type="radio" name="quantityBasis" value="cumulative" checked> 누적 수량</label>
+            <label><input type="radio" name="quantityBasis" value="work"> 작업 수량</label>
+          </div>
+        </fieldset>
+        <fieldset class="report-channel-fieldset">
+          <legend>제품 선택</legend>
+          <label class="report-select-all"><input id="productReportAll" type="checkbox" disabled> 전체 선택</label>
+          <div id="productReportOptions" class="report-channel-options"></div>
+        </fieldset>
+        <fieldset class="report-channel-fieldset">
+          <legend>분석 항목 선택</legend>
+          <label class="report-select-all"><input id="productAnalysisAll" type="checkbox" checked> 전체 선택</label>
+          <div id="productAnalysisOptions" class="report-channel-options">
+            <label><input type="checkbox" value="initialQuantity" checked> 초기 수량</label>
+            <label><input type="checkbox" value="endQuantity" checked> 종료 수량</label>
+            <label><input type="checkbox" value="increaseQuantity" checked> 증가 수량</label>
+            <label><input type="checkbox" value="cumulative" checked> 누적 수량 그래프</label>
+            <label><input type="checkbox" value="minutely" checked> 분별 작업 수량 그래프</label>
+            <label><input type="checkbox" value="hourly" checked> 시간별 작업 수량 그래프</label>
+            <label><input type="checkbox" value="daily" checked> 일별 작업 수량 그래프</label>
+            <label><input type="checkbox" value="weekly" checked> 주간별 작업 수량 그래프</label>
+            <label><input type="checkbox" value="monthly" checked> 월별 작업 수량 그래프</label>
+          </div>
+        </fieldset>
+      </form>
+    </section>
+    <section class="report-results" aria-labelledby="productReportTitle" aria-busy="false">
+      <div class="report-result-toolbar">
+        <h2 id="productReportTitle">제품별 분석</h2>
+        <div class="report-actions">
+          <button id="productPdf" class="link" type="button" disabled>제품 PDF 다운로드</button>
+          <button id="productExcel" class="link" type="button" disabled>Excel 다운로드</button>
+        </div>
+      </div>
+      <p id="productReportMessage" class="report-message" role="status" aria-live="polite">제품과 조회 조건을 선택하세요.</p>
+      <p id="productReportPeriod" class="report-period"></p>
+      <div id="reportResults"></div>
+    </section>
+  </main>
+</body>
+</html>

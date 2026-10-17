@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KIMS FACTORIES V1.0</title>
+    <link rel="stylesheet" href="/style.css?v=20261016-product-channel-mapping-name">
+    <script src="/page-settings.js?v=20261005-4" defer></script>
+</head>
+
+<body>
+    <header>
+        <div class="product-heading">
+            <p class="product-eyebrow"></p>
+            <h1>제품-채널 연결 관리</h1>
+        </div>
+
+        <div class="header-actions">
+            <span id="userInfo" class="user-info">로그인 확인 중...</span>
+            <a class="link" href="/">생산 현황</a>
+            <a class="link" href="/product-control.html">생산 입력</a>
+            <a class="link" href="/product-admin.html">제품 관리</a>
+            <a class="link" href="/device-view.html">Device 보기</a>
+            <a id="profileLink" class="link" href="/user-profile.html">회원정보</a>
+            <button class="logout-button" onclick="logout()">로그아웃</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel">
+            <div class="panel-title">
+                <h2 id="mappingTitle">연결 등록</h2>
+                <span>디바이스 채널이 ON될 때 연결된 제품 수량이 1씩 증가합니다.</span>
+            </div>
+
+            <form id="mappingForm" class="mapping-form" autocomplete="off">
+                <div class="mapping-form-grid">
+                    <label>
+                        제품
+                        <select id="productSelect" required></select>
+                    </label>
+                    <label>
+                        디바이스
+                        <select id="deviceSelect" required></select>
+                    </label>
+                    <label>
+                        채널
+                        <select id="channelSelect" required></select>
+                    </label>
+                    <label>
+                        연결 명칭
+                        <input id="mappingName" type="text" maxlength="100" required placeholder="예: 조립 1라인 생산 연결">
+                    </label>
+                </div>
+                <div class="mapping-actions">
+                    <button id="mappingSubmitButton" type="submit">연결 등록</button>
+                    <button id="cancelEditButton" type="button" hidden>수정 취소</button>
+                    <span id="mappingMessage" aria-live="polite"></span>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel">
+            <div class="panel-title">
+                <h2>현재 연결 목록</h2>
+            </div>
+            <div class="table-wrap">
+                <table class="product-edit-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>제품코드</th>
+                            <th>제품명</th>
+                            <th>디바이스</th>
+                            <th>채널</th>
+                            <th>연결 명칭</th>
+                            <th>등록자</th>
+                            <th>등록일</th>
+                            <th>작업</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mappingsBody">
+                        <tr>
+                            <td colspan="9">로딩 중...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script src="/product-channel-link.js?v=20261016-product-channel-mapping-name"></script>
+</body>
+
+</html>

@@ -1,0 +1,65 @@
+.product-quantity-page .product-quantity-form {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--factory-line);
+}
+.product-quantity-page .product-quantity-form > label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.product-quantity-page .quantity-reason {
+  display: grid;
+  gap: 6px;
+  color: var(--factory-muted);
+  font-size: 12px;
+}
+.product-quantity-page .quantity-reason input,
+.product-quantity-page #newReason {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px;
+}
+.product-quantity-page .quantity-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.product-quantity-page .quantity-input input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.product-quantity-page .quantity-input button {
+  white-space: normal;
+  min-width: 112px;
+}
+.product-quantity-page .product-table {
+  min-width: 1100px;
+}
+.product-quantity-page .product-table :is(th, td):nth-child(1) { width: 10%; }
+.product-quantity-page .product-table :is(th, td):nth-child(2) { width: 18%; }
+.product-quantity-page .product-table :is(th, td):nth-child(3),
+.product-quantity-page .product-table :is(th, td):nth-child(4),
+.product-quantity-page .product-table :is(th, td):nth-child(5),
+.product-quantity-page .product-table :is(th, td):nth-child(8) { width: 10%; }
+.product-quantity-page .product-table :is(th, td):nth-child(6),
+.product-quantity-page .product-table :is(th, td):nth-child(9) { width: 12%; }
+.product-quantity-page .product-table :is(th, td):nth-child(7) { width: 8%; }
+.product-quantity-page .product-table td:nth-child(9) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.product-admin-page .product-admin-list {
+  min-width: 1050px;
+}
+body.product-quantity-page .summary {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+@media (max-width: 600px) {
+  .product-quantity-page .quantity-input button {
+    min-width: 100px;
+    font-size: 12px;
+  }
+}
