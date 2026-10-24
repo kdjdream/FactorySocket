@@ -1,0 +1,9 @@
+{
+    "python.terminal.useEnvFile": true,
+    "chat.tools.terminal.autoApprove": {
+        "/^node --check public\\\\user_customization\\.js; node --check public\\\\user_customization_graph_config\\.js; node --test test\\\\device-protocol\\.test\\.js test\\\\css-structure\\.test\\.js test\\\\user_customization_stream_chart\\.test\\.js$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

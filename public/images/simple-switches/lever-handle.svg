@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 120">
+  <defs>
+    <linearGradient id="shaft" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#364450"/><stop offset=".18" stop-color="#8798a5"/>
+      <stop offset=".36" stop-color="#f7fbff"/><stop offset=".52" stop-color="#c8d5df"/>
+      <stop offset=".76" stop-color="#657784"/><stop offset="1" stop-color="#2c3944"/>
+    </linearGradient>
+    <linearGradient id="grip" x1="0" y1="0" x2="1" y2=".15">
+      <stop stop-color="#566674"/><stop offset=".25" stop-color="#dce6ed"/>
+      <stop offset=".4" stop-color="#fff"/><stop offset=".62" stop-color="#acbdc9"/>
+      <stop offset="1" stop-color="#435460"/>
+    </linearGradient>
+    <radialGradient id="pivot" cx=".32" cy=".24" r=".75">
+      <stop stop-color="#f4faff"/><stop offset=".35" stop-color="#b9cad6"/>
+      <stop offset=".7" stop-color="#657b8b"/><stop offset="1" stop-color="#263846"/>
+    </radialGradient>
+  </defs>
+  <path d="M47 26h9v61q0 8-7 8h-2Z" fill="#111c27" opacity=".24"/>
+  <circle cx="48" cy="90" r="10" fill="url(#pivot)" stroke="#273745" stroke-width="1.5"/>
+  <path d="M42 83l-1-48h14l-1 48q-6 5-12 0Z" fill="url(#shaft)" stroke="#384c5b" stroke-width="1.2"/>
+  <path d="M39 18q0-9 9-9t9 9l-2 35q-7 5-14 0Z" fill="url(#grip)" stroke="#405362" stroke-width="1.5"/>
+  <ellipse cx="48" cy="15" rx="7" ry="4" fill="#dce8ef" stroke="#9eafbb"/>
+  <path d="M43 23l1 25" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".85"/>
+  <path d="M42 54q6 3 12 0" fill="none" stroke="#334958" stroke-width="1.5"/>
+  <path d="M44 61v17" stroke="#f2f9ff" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>
+</svg>

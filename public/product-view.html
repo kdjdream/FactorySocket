@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="style.css?v=20261016-product-code-typography">
+  <link rel="stylesheet" href="/product-quantity.css?v=3">
+  <script src="/page-settings.js?v=20261016-product-admin7" defer></script>
+</head>
+
+<body class="product-quantity-page">
+  <header>
+    <div class="product-heading">
+      <p class="product-eyebrow"></p>
+      <h1>생산 현황</h1>
+    </div>
+    <div class="header-actions">
+      <span id="userInfo" class="user-info">로그인 확인 중...</span>
+      <a id="controlLink" class="link" href="/product-control.html" style="display:none">생산 입력</a>
+      <a id="productAdminLink" class="link" href="/product-admin.html" style="display:none">제품 관리</a>
+      <a class="link" href="/product-report.html">생산 리포트</a>
+      <a id="deviceLink" class="link" href="/device-view.html">Device 보기</a>
+      <a id="deviceControlLink" class="link" href="/device-control.html" style="display:none">Device 제어</a>
+      <a id="profileLink" class="link" href="/user-profile.html">회원정보</a>
+      <button class="logout-button" onclick="logout()">로그아웃</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary">
+      <div class="card" id="summaryCard"><span>생산 품목</span><strong id="productCount">0</strong></div>
+      <div class="card" id="summaryQuantityCard"><span>총 누적 수량</span><strong id="totalQuantity">0</strong></div>
+      <div class="card" id="summaryWorkCard"><span>총 작업 수량</span><strong id="totalWorkQuantity">0</strong></div>
+      <div class="card" id="targetCard"><span>총 목표수량</span><strong id="totalTarget">0</strong></div>
+      <div class="card rate-card" id="rateCard"><span>달성률</span><strong id="totalRate">0%</strong></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title product-selection-heading">
+        <h2>제품별 생산 현황</h2>
+        <div class="product-selection-toolbar" role="group" aria-label="생산 현황 제품 선택">
+          <span id="productSelectionCount" aria-live="polite"></span>
+          <span id="lastUpdate">-</span>
+          <button id="productSelectButton" class="link" type="button">제품 선택</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="product-table">
+          <thead>
+            <tr>
+              <th>제품코드</th>
+              <th>제품명</th>
+              <th>누적 수량</th>
+              <th>작업 수량</th>
+              <th>목표수량</th>
+              <th>달성률</th>
+              <th>상태</th>
+              <th id="changedByHeader">변경자</th>
+              <th id="updatedAtHeader">최종변경</th>
+            </tr>
+          </thead>
+          <tbody id="productTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="productPicker" class="product-picker" aria-labelledby="productPickerTitle">
+    <form id="productPickerForm">
+      <h2 id="productPickerTitle">생산 현황에 표시할 제품 선택</h2>
+      <label class="product-picker-option product-picker-select-all">
+        <input id="productSelectAll" type="checkbox">
+        <span>전체 선택</span>
+      </label>
+      <div id="productPickerChoices" class="product-picker-choices"></div>
+      <p id="productPickerEmpty" class="product-picker-empty" hidden>활성화된 제품이 없습니다.</p>
+      <p id="productPickerMessage" role="status" aria-live="polite"></p>
+      <div class="product-picker-footer">
+        <button id="productPickerCancel" type="button">취소</button>
+        <button class="admin-submit" type="submit">적용</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/product-selection.js?v=20261024-database"></script>
+  <script src="/product-view.js?v=20261024-selection-database"></script>
+</body>
+
+</html>

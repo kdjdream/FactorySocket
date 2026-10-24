@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="/style.css?v=20261023-desktop-popup">
+  <script src="/page-settings.js?v=20261021-user-customization-files" defer></script>
+  <script src="/user-logout.js" defer></script>
+  <script src="/user_customization_graph_config.js?v=20261023-channel-layout" defer></script>
+  <script src="/user_customization_stream_chart.js?v=20261021-user-customization" defer></script>
+  <script src="/user_customization.js?v=20261024-channel-visibility" defer></script>
+</head>
+<body class="device-page device-simple-page">
+  <main class="device-shell">
+    <header class="device-header">
+      <div class="device-heading"><p class="device-eyebrow"></p><h1>사용자 디자인</h1></div>
+      <nav class="device-page-links" aria-label="디바이스 페이지">
+        <a class="link" href="/">생산 현황</a>
+        <a class="link" href="/device-control.html">디바이스 제어</a>
+        <a class="link" href="/user-profile.html">회원 정보</a>
+        <button class="logout-button" onclick="logout()">로그아웃</button>
+      </nav>
+    </header>
+    <section class="simple-controls" aria-label="개인 채널 제어">
+      <div class="simple-toolbar">
+        <span id="User_customizationCount">0개 채널</span>
+        <button id="User_customizationSelect" class="link" type="button">채널 선택</button>
+      </div>
+      <div id="User_customizationGrid" class="active-device-channels simple-control-grid" role="list" aria-label="선택한 채널"></div>
+      <p id="User_customizationEmpty" class="empty-state" hidden>선택한 채널이 없습니다.</p>
+      <p id="User_customizationMessage" class="simple-message" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+  <dialog id="User_customizationPicker" class="simple-picker" aria-labelledby="User_customizationPickerTitle">
+    <form id="User_customizationPickerForm">
+      <div class="simple-picker-heading">
+        <h2 id="User_customizationPickerTitle">채널 선택</h2>
+        <nav id="User_customizationPickerTypes" class="simple-picker-types" aria-label="채널 표시 유형">
+          <a href="#User_customizationChoices" data-display-type="switch" aria-current="true">스위치</a>
+          <a href="#User_customizationChoices" data-display-type="lamp">램프</a>
+          <a href="#User_customizationChoices" data-display-type="graph">그래프</a>
+        </nav>
+        <span id="User_customizationSelectionCount"></span>
+      </div>
+      <div class="simple-picker-search">
+        <select id="User_customizationDeviceFilter" aria-label="디바이스 선택"><option value="">전체 디바이스</option></select>
+        <input id="User_customizationSearch" type="search" placeholder="장치 또는 채널 검색" aria-label="장치 또는 채널 검색">
+      </div>
+      <div class="simple-picker-actions">
+        <button type="button" id="User_customizationSelectAll">전체 선택</button>
+        <button type="button" id="User_customizationClearAll">선택 해제</button>
+      </div>
+      <div id="User_customizationChoices" class="simple-choices"></div>
+      <p id="User_customizationPickerMessage" role="status" aria-live="polite"></p>
+      <div class="simple-picker-footer">
+        <button id="User_customizationCancel" type="button">취소</button>
+        <button id="User_customizationSave" class="admin-submit" type="submit">저장</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="User_customizationGraphSettings" class="simple-picker" aria-labelledby="User_customizationGraphSettingsTitle">
+    <form id="User_customizationGraphSettingsForm" class="simple-channel-settings-form">
+      <h2 id="User_customizationGraphSettingsTitle">채널 설정</h2>
+      <p id="User_customizationGraphSettingsChannel"></p>
+      <fieldset>
+        <legend>기본 옵션</legend>
+        <label class="simple-gauge-option">디바이스 이름 변경: <input name="device_name_override" type="text" maxlength="100" aria-describedby="User_customizationNameOverrideHelp"></label>
+        <label class="simple-gauge-option">채널 이름 변경: <input name="channel_name_override" type="text" maxlength="100" aria-describedby="User_customizationNameOverrideHelp"></label>
+        <p id="User_customizationNameOverrideHelp">비워두고 저장하면 원래 이름으로 복원됩니다.</p>
+        <label class="simple-gauge-option"><input name="hide_device_name" type="checkbox">디바이스 이름 숨기기</label>
+        <label class="simple-gauge-option"><input name="hide_channel_name" type="checkbox">채널 이름 숨기기</label>
+        <label class="simple-gauge-option"><input name="hide_device_id" type="checkbox">디바이스 ID 숨기기</label>
+        <label class="simple-gauge-option"><input name="hide_signal" type="checkbox">채널 ID 숨기기</label>
+        <label class="simple-gauge-option"><input name="hide_is_state" type="checkbox">IS State 숨기기</label>
+        <label class="simple-gauge-option"><input name="hide_istr" type="checkbox">IStr 숨기기</label>
+        <label class="simple-gauge-option"><input name="popup_channel" type="checkbox">팝업 하기</label>
+        <small>여러 독립 창에서 주소창 없이 닫기 버튼만 표시하려면 Windows 전용 실행기를 사용하세요.</small>
+        <label class="simple-gauge-option"><input name="remove_channel" type="checkbox" aria-describedby="User_customizationRemoveChannelHelp">채널 제거하기</label>
+        <p id="User_customizationRemoveChannelHelp">선택 후 저장하면 이 화면에서만 제거됩니다. 실제 장비·채널은 삭제되지 않으며 채널 선택에서 다시 추가할 수 있습니다.</p>
+      </fieldset>
+      <fieldset>
+        <legend>디자인 설정</legend>
+        <label class="simple-gauge-option">디자인: <select name="channel_design" id="User_customizationSettingsDesign"></select></label>
+        <fieldset>
+          <legend>채널 사이즈 변경</legend>
+          <div class="simple-gauge-fields">
+            <label>가로 (배)<input name="width_multiplier" type="number" min="1" max="4" step="1" required></label>
+            <label>세로 (배)<input name="height_multiplier" type="number" min="1" max="4" step="1" required></label>
+          </div>
+          <label class="simple-gauge-option"><input name="scale_contents" type="checkbox">채널 크기에 맞춰 Body 내부 디자인과 글자만 확대</label>
+        </fieldset>
+        <label id="User_customizationSwitchExpansion" class="simple-gauge-option"><input name="expand_switch" type="checkbox" disabled>스위치 확장</label>
+        <p id="User_customizationSwitchExpansionHelp">디바이스 이름과 채널 이름을 모두 숨기면 스위치를 Header까지 확장할 수 있습니다.</p>
+        <fieldset id="User_customizationDisplayExpansion" hidden disabled>
+          <legend>표시 영역 확장</legend>
+          <label class="simple-gauge-option"><input name="expand_header" type="checkbox"><span id="User_customizationExpandHeaderLabel">램프 확장(Header)</span></label>
+          <label class="simple-gauge-option"><input name="expand_tail" type="checkbox"><span id="User_customizationExpandTailLabel">램프 확장(Tail)</span></label>
+        </fieldset>
+        <div class="simple-gauge-fields simple-color-fields">
+          <div class="simple-color-setting">
+            <label for="User_customizationOnColor">ON 색상</label>
+            <div class="simple-color-setting-controls">
+              <input id="User_customizationOnColor" name="on_color" type="color">
+              <button id="User_customizationOnColorDefault" type="button" aria-label="ON 색상 기본값 복구">기본값</button>
+            </div>
+          </div>
+          <div class="simple-color-setting">
+            <label for="User_customizationOffColor">OFF 색상</label>
+            <div class="simple-color-setting-controls">
+              <input id="User_customizationOffColor" name="off_color" type="color">
+              <button id="User_customizationOffColorDefault" type="button" aria-label="OFF 색상 기본값 복구">기본값</button>
+            </div>
+          </div>
+        </div>
+        <p>상태 색상을 변경합니다. 금속 질감·스위치 이미지·물줄기 등 고유 장식은 유지됩니다.</p>
+        <p id="User_customizationAngleSettingsInfo" hidden>IStr 정수 각도 · 위쪽 0° · 증가 시 우회전 / 감소 시 좌회전 · 전환 800ms</p>
+        <fieldset id="User_customizationLampSettingsFields" hidden disabled>
+          <legend>램프 설정</legend>
+          <label class="simple-gauge-option"><input name="fill_lamp" type="checkbox">램프 꽉 채우기 (원형 비율 유지)</label>
+        </fieldset>
+        <fieldset id="User_customizationArrowSettingsFields" hidden disabled>
+          <legend>화살표 설정</legend>
+          <label class="simple-gauge-option">화살표 방향
+            <select name="arrow_direction">
+              <option value="left">왼쪽</option>
+              <option value="right">오른쪽</option>
+              <option value="up">위쪽</option>
+              <option value="down">아래쪽</option>
+              <option value="up_right">오른쪽 위</option>
+              <option value="down_right">오른쪽 아래</option>
+              <option value="up_left">왼쪽 위</option>
+              <option value="down_left">왼쪽 아래</option>
+            </select>
+          </label>
+        </fieldset>
+        <fieldset id="User_customizationGraphButtonSettingsFields" hidden disabled>
+          <legend>보기 설정</legend>
+          <p>배경에는 위의 ON 색상·OFF 색상이 OS 상태에 따라 적용됩니다.</p>
+          <div class="simple-color-setting">
+            <label for="User_customizationGraphButtonTextColor">문자 색상</label>
+            <div class="simple-color-setting-controls">
+              <input id="User_customizationGraphButtonTextColor" name="graph_button_text_color" type="color">
+            </div>
+          </div>
+          <label class="simple-gauge-option">폰트
+            <select name="graph_button_font_family">
+              <option value="default">기본 글꼴</option>
+              <option value="sans-serif">고딕체</option>
+              <option value="serif">명조체</option>
+              <option value="monospace">고정폭 글꼴</option>
+              <option value="malgun-gothic">맑은 고딕</option>
+              <option value="gulim">굴림</option>
+            </select>
+          </label>
+          <p>선택한 글꼴이 설치되어 있지 않으면 해당 계열의 기본 글꼴로 표시됩니다.</p>
+          <label class="simple-gauge-option">문자 크기
+            <select name="graph_button_font_size">
+              <option value="12">12px</option>
+              <option value="16">16px</option>
+              <option value="20">20px</option>
+              <option value="24">24px</option>
+              <option value="28">28px</option>
+              <option value="32">32px</option>
+              <option value="36">36px</option>
+              <option value="40">40px</option>
+              <option value="48">48px</option>
+              <option value="56">56px</option>
+              <option value="64">64px</option>
+              <option value="72">72px</option>
+              <option value="80">80px</option>
+              <option value="96">96px</option>
+              <option value="112">112px</option>
+              <option value="128">128px</option>
+              <option value="144">144px</option>
+            </select>
+          </label>
+          <label class="simple-gauge-option">텍스트 박스 높이
+            <select name="graph_button_height">
+              <option value="button">기본 버튼 높이 (기본값)</option>
+              <option value="bottom">아래까지 확장</option>
+              <option value="channel">채널 박스 전체 높이</option>
+            </select>
+          </label>
+          <p>기본값은 스위치 버튼처럼 Body 높이를 모두 사용합니다. 아래까지 확장도 동일하게 Body를 채우며, 전체 높이는 Header와 Tail까지 배경을 확장합니다.</p>
+        </fieldset>
+        <fieldset id="User_customizationGaugeSettingsFields" hidden disabled>
+          <legend>계기판 변수</legend>
+          <div class="simple-gauge-fields">
+            <label>제목<input name="title" maxlength="40"></label>
+            <label>단위<input name="unit" maxlength="40"></label>
+            <label>눈금 하한<input name="min" type="number" step="any" required></label>
+            <label>눈금 상한<input name="max" type="number" step="any" required></label>
+            <label>주 눈금 간격 (측정값)<input name="major_interval" type="number" step="any" required></label>
+            <label>보조 눈금 간격 (측정값)<input name="minor_interval" type="number" step="any" required></label>
+            <label>정상 범위 하한<input name="normal_min" type="number" step="any" required></label>
+            <label>정상 범위 상한<input name="normal_max" type="number" step="any" required></label>
+          </div>
+          <label class="simple-gauge-option"><input name="fill_graph" type="checkbox">그래프 꽉 채우기 (원형 비율 유지)</label>
+          <label class="simple-gauge-option"><input name="hide_measurement_type" type="checkbox">측정 타입 숨기기</label>
+          <label class="simple-gauge-option"><input name="hide_unit" type="checkbox">단위 숨기기</label>
+          <label class="simple-gauge-option"><input name="hide_scale_labels" type="checkbox">눈금 숫자 숨기기</label>
+        </fieldset>
+        <fieldset id="User_customizationChartSettingsFields" hidden disabled>
+          <legend>실시간 차트 설정</legend>
+          <div class="simple-gauge-fields">
+            <label>제목<input name="chart_title" maxlength="40"></label>
+            <label>단위<input name="chart_unit" maxlength="40"></label>
+            <label>표시 시간 (초)<input name="chart_window_seconds" type="number" min="1" max="86400" step="1" required></label>
+            <label>차트 종류<select name="chart_chart_type"><option value="line">선</option><option value="area">영역</option><option value="step">계단</option><option value="bar">막대</option></select></label>
+            <label>Y축 범위<select name="chart_y_mode"><option value="auto">표시 데이터 최솟값·최댓값 자동</option><option value="manual">직접 지정</option></select></label>
+            <label>Y축 하한<input name="chart_y_min" type="number" step="any" required></label>
+            <label>Y축 상한<input name="chart_y_max" type="number" step="any" required></label>
+            <label>연결선 색상<input name="chart_line_color" type="color"></label>
+            <label>데이터 원 색상<input name="chart_point_color" type="color"></label>
+            <label>데이터 원 반지름 (px)<input name="chart_point_radius" type="number" min="1" max="8" step="any" required></label>
+            <label>데이터 원 테두리 두께 (px)<input name="chart_point_width" type="number" min="0" max="6" step="any" required></label>
+            <label>배경 색상<input name="chart_background_color" type="color"></label>
+            <label>연결선 두께 (px)<input name="chart_line_width" type="number" min="1" max="6" step="any" required></label>
+          </div>
+          <label class="simple-gauge-option"><input name="chart_show_grid" type="checkbox">격자 표시</label>
+          <label class="simple-gauge-option"><input name="chart_show_axes" type="checkbox">시간·Y축 숫자 표시</label>
+          <label class="simple-gauge-option"><input name="chart_show_value" type="checkbox">현재 측정값 표시</label>
+          <label class="simple-gauge-option"><input name="chart_show_title" type="checkbox">제목 표시</label>
+          <label class="simple-gauge-option"><input name="chart_show_unit" type="checkbox">단위 표시</label>
+          <p>IStr이 수신될 때마다 실시간 값을 기록합니다. 최근 표시 시간만 왼쪽으로 스크롤하며, 최대 10,000개를 보관합니다. 새로고침하면 데이터는 초기화됩니다. 연결 끊김·숫자가 아닌 값은 빈 구간으로 표시합니다.</p>
+        </fieldset>
+      </fieldset>
+      <p id="User_customizationGraphSettingsMessage" role="status" aria-live="polite"></p>
+      <div class="simple-picker-footer">
+        <button id="User_customizationGraphSettingsCancel" type="button">취소</button>
+        <button id="User_customizationGraphSettingsSave" type="submit">저장</button>
+      </div>
+    </form>
+  </dialog>
+</body>
+</html>

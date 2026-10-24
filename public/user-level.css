@@ -1,0 +1,184 @@
+.level-policy-toolbar,
+.level-policy-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.level-policy-toolbar h2 {
+  margin: 0 0 5px;
+  font-size: 19px;
+}
+#levelPolicyVersion,
+#levelPolicyDirty {
+  color: var(--factory-muted);
+  font-size: 12px;
+}
+.level-policy-actions button {
+  min-height: 36px;
+  border: 1px solid var(--factory-line);
+  border-radius: 4px;
+  padding: 8px 12px;
+  background: var(--factory-surface);
+  color: var(--factory-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.level-policy-actions #levelPolicySave {
+  border-color: var(--factory-green);
+  background: var(--factory-green);
+  color: var(--factory-surface);
+}
+.level-policy-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.level-policy-message {
+  min-height: 20px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--factory-muted);
+}
+.level-policy-message[data-error="true"] {
+  color: var(--factory-coral);
+}
+.level-policy-wrap {
+  border: 1px solid var(--factory-line);
+  border-radius: 4px;
+  background: var(--factory-surface);
+}
+body .level-policy-table {
+  width: 100%;
+  min-width: 960px;
+  table-layout: fixed;
+}
+body .level-policy-table th,
+body .level-policy-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--factory-line);
+  text-align: left;
+}
+.level-policy-table th:first-child {
+  width: 190px;
+}
+.level-policy-table th:last-child {
+  width: 100px;
+}
+.level-policy-axis {
+  display: grid;
+  grid-template-columns: repeat(20, minmax(0, 1fr));
+  min-height: 32px;
+  align-items: center;
+  text-align: center;
+  font-size: 11px;
+}
+.level-policy-label {
+  display: grid;
+  gap: 3px;
+  font-size: 13px;
+}
+.level-policy-label small {
+  color: var(--factory-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.level-policy-site {
+  overflow-wrap: anywhere;
+  font-family: monospace;
+  font-size: 10px;
+}
+.level-policy-track {
+  position: relative;
+  height: 42px;
+  background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(5% - 1px), var(--factory-line) calc(5% - 1px), var(--factory-line) 5%);
+}
+.level-policy-bar {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: calc((var(--minimum-level) - 1) * 5%);
+  right: 0;
+  border-left: 3px solid var(--level-color, var(--factory-green));
+  border-radius: 2px;
+  background: var(--level-soft, var(--factory-green-soft));
+}
+.level-policy-page .level-policy-track input[type="range"] {
+  appearance: none;
+  position: absolute;
+  top: 0;
+  left: 2.5%;
+  width: 95%;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--level-color, var(--factory-green));
+  cursor: ew-resize;
+}
+.level-policy-track input[type="range"]::-webkit-slider-runnable-track {
+  height: 24px;
+  background: transparent;
+}
+.level-policy-track input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 24px;
+  border: 2px solid var(--factory-surface);
+  border-radius: 3px;
+  background: var(--level-color, var(--factory-green));
+  box-shadow: 0 0 0 1px var(--level-color, var(--factory-green));
+}
+.level-policy-track input[type="range"]::-moz-range-track,
+.level-policy-track input[type="range"]::-moz-range-progress {
+  height: 24px;
+  background: transparent;
+}
+.level-policy-track input[type="range"]::-moz-range-thumb {
+  width: 10px;
+  height: 22px;
+  border: 2px solid var(--factory-surface);
+  border-radius: 3px;
+  background: var(--level-color, var(--factory-green));
+}
+.level-policy-track input[type="range"]:focus-visible {
+  outline: 2px solid var(--factory-blue);
+  outline-offset: 2px;
+}
+.level-policy-track input[type="range"]:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+.level-policy-number {
+  width: 68px;
+  min-height: 34px;
+  padding: 5px 6px;
+  font-size: 13px;
+}
+.level-policy-row[data-group="디바이스"] {
+  --level-color: var(--factory-blue);
+  --level-soft: var(--factory-blue-soft);
+}
+.level-policy-row[data-group="회원"] {
+  --level-color: var(--factory-amber);
+  --level-soft: var(--factory-amber-soft);
+}
+.level-policy-row.is-dirty .level-policy-label strong::after {
+  content: " *";
+  color: var(--factory-coral);
+}
+body .level-policy-table tbody tr:hover {
+  background: var(--factory-ground);
+}
+@media (max-width: 600px) {
+  .level-policy-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  #levelPolicyDirty {
+    margin-right: auto;
+  }
+}

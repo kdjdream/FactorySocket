@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <path id="quarter" d="M48 10A51 51 0 0 1 92 20Q94 22 92 24L85 30Q83 32 81 29A37 37 0 0 0 50 24L52 30Q53 33 50 32L28 22Q25 20 28 18L45 4Q48 2 48 6Z"/>
+  </defs>
+  <use href="#quarter"/>
+  <use href="#quarter" transform="rotate(90 60 60)"/>
+  <use href="#quarter" transform="rotate(180 60 60)"/>
+  <use href="#quarter" transform="rotate(270 60 60)"/>
+</svg>

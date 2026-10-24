@@ -1,0 +1,4 @@
+.env
+.factory-secrets/
+.pio/
+node_modules

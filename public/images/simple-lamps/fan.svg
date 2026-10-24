@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <circle cx="60" cy="60" r="56" fill="none" stroke="#000" stroke-width="5"/>
+  <g fill="#000">
+    <path id="blade" d="M57 53C32 42 35 12 56 11c21-1 29 20 11 42Z"/>
+    <use href="#blade" transform="rotate(90 60 60)"/>
+    <use href="#blade" transform="rotate(180 60 60)"/>
+    <use href="#blade" transform="rotate(270 60 60)"/>
+    <circle cx="60" cy="60" r="13"/>
+  </g>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120">
+  <defs><mask id="fins"><path fill="#fff" d="M0 0h240v120H0z"/>
+  <g fill="none" stroke="#000" stroke-width="3">
+    <path d="M39 34v57m16-57v57m16-57v57m16-57v57m16-57v57m16-57v57m16-57v57m16-57v57"/>
+  </g></mask></defs>
+  <path mask="url(#fins)" d="M27 24h141v76H27zM52 5h62v16H52zM13 20h11v84H13zM3 46h8v32H3zM32 102h17v9h87v-9h17v16H25v-7h7zM217 54h21v16h-21Z"/>
+  <circle cx="192" cy="62" r="34"/>
+</svg>

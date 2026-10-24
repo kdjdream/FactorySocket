@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="/style.css?v=20261018-companies">
+  <link rel="stylesheet" href="/user-company.css?v=8">
+  <script src="/page-settings.js?v=20261018-companies" defer></script>
+  <script src="/user-logout.js" defer></script>
+  <script src="/user-company.js?v=11" defer></script>
+</head>
+<body class="company-admin-page">
+  <header>
+    <div class="user-heading"><p class="user-eyebrow"></p><h1>회사 등록</h1></div>
+    <nav class="header-actions" aria-label="회원 페이지">
+      <a class="link" href="/">생산 현황</a>
+      <a class="link" href="/user-profile.html">회원 정보</a>
+      <button class="logout-button" onclick="logout()">로그아웃</button>
+    </nav>
+  </header>
+  <main>
+    <section class="company-entry-section" aria-labelledby="companyFormTitle">
+      <div class="company-section-heading"><h2 id="companyFormTitle">신규 회사 조직</h2><button id="companyCancel" type="button" hidden>수정 취소</button></div>
+      <form id="companyForm">
+        <div class="company-field-row company-field-heading" aria-hidden="true"><span>조직 구분</span><span>3자리 코드</span><span>명칭</span></div>
+        <p class="company-form-hint">일반 개인 사용자를 제외한 조직은 그룹·회사·사업장·부서·직무의 5단계로 등록합니다. 일반 개인 사용자의 부서·직무 코드는 가입 시 자동 생성됩니다.</p>
+        <div class="company-field-row"><label for="companyCodeGroup" title="Group">그룹</label><input id="companyCodeGroup" minlength="3" maxlength="3" required autocomplete="off" aria-label="그룹 코드"><input id="companyNameGroup" maxlength="100" required aria-label="그룹 이름" placeholder="그룹명"></div>
+        <div class="company-field-row"><label for="companyCodeCompany" title="Company">회사</label><input id="companyCodeCompany" minlength="3" maxlength="3" autocomplete="off" aria-label="회사 코드"><input id="companyNameCompany" maxlength="150" aria-label="회사 이름" placeholder="회사명"></div>
+        <div class="company-field-row"><label for="companyCodeSite" title="Site">사업장</label><input id="companyCodeSite" minlength="3" maxlength="3" autocomplete="off" aria-label="사업장 코드"><input id="companyNameSite" maxlength="100" aria-label="사업장 이름" placeholder="사업장명"></div>
+        <div class="company-field-row"><label for="companyCodeDepartment" title="Department">부서</label><input id="companyCodeDepartment" minlength="3" maxlength="3" autocomplete="off" aria-label="부서 코드"><input id="companyNameDepartment" maxlength="100" aria-label="부서 이름" placeholder="부서명"></div>
+        <div class="company-field-row"><label for="companyCodeRole" title="Job">직무</label><input id="companyCodeRole" minlength="3" maxlength="3" autocomplete="off" aria-label="직무 코드"><input id="companyNameRole" maxlength="100" aria-label="직무 이름" placeholder="직무명"></div>
+        <div class="company-form-actions"><label class="company-active-label"><input id="companyActive" type="checkbox" checked>사용</label><button id="companySave" type="submit">등록</button></div>
+      </form>
+      <p id="companyMessage" class="company-message" role="status" aria-live="polite"></p>
+    </section>
+    <section aria-labelledby="companyListTitle">
+      <div class="company-section-heading"><div><h2 id="companyListTitle">등록 회사 조직</h2><span id="companyCount"></span></div><div class="company-list-tools"><input id="companySearch" type="search" placeholder="전체 조직 검색" aria-label="전체 조직 검색"><button id="companyReload" type="button">새로고침</button></div></div>
+      <div class="table-wrap company-table-wrap"><table class="company-table"><thead><tr>
+        <th scope="col"><div class="company-column-heading"><span>ID</span><div id="companyFilterId" class="company-column-filter"></div></div></th>
+        <th scope="col"><div class="company-column-heading"><span>그룹</span><div id="companyFilterGroup" class="company-column-filter"></div></div></th>
+        <th scope="col"><div class="company-column-heading"><span>회사</span><div id="companyFilterCompany" class="company-column-filter"></div></div></th>
+        <th scope="col"><div class="company-column-heading"><span>사업장</span><div id="companyFilterSite" class="company-column-filter"></div></div></th>
+        <th scope="col"><div class="company-column-heading"><span>부서</span><div id="companyFilterDepartment" class="company-column-filter"></div></div></th>
+        <th scope="col"><div class="company-column-heading"><span>직무</span><div id="companyFilterRole" class="company-column-filter"></div></div></th>
+        <th scope="col"><div class="company-column-heading"><span>상태</span><div id="companyFilterStatus" class="company-column-filter"></div></div></th>
+        <th scope="col">관리</th>
+      </tr></thead><tbody id="companyRows"></tbody></table></div>
+    </section>
+  </main>
+</body>
+</html>

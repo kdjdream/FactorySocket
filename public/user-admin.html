@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>KIMS FACTORIES V1.0</title>
+  <link rel="stylesheet" href="style.css?v=20261019-field-validation">
+  <link rel="stylesheet" href="/registration.css?v=1">
+  <link rel="stylesheet" href="/user-admin.css?v=3">
+  <script src="/registration-history.js?v=1" defer></script>
+  <script src="/page-settings.js?v=20261005-4" defer></script>
+  <script src="/field-validation.js?v=1" defer></script>
+</head>
+
+<body class="member-admin-page">
+  <header>
+    <div class="user-heading">
+      <p class="user-eyebrow"></p>
+      <h1>회원가입 신청 승인</h1>
+    </div>
+    <div class="header-actions"><a class="link" href="/">생산 현황</a>
+      <a id="deviceLink" class="link" href="/device-view.html">Device 보기</a>
+      <a id="profileLink" class="link" href="/user-profile.html">회원정보</a>
+      <button class="logout-button" onclick="logout()">로그아웃</button>
+    </div>
+  </header>
+  <main>
+    <section class="summary">
+      <div class="card"><span>정식회원</span><strong id="total">0</strong></div>
+      <div class="card"><span>승인 대기</span><strong id="pending">0</strong></div>
+      <div class="card"><span>승인 회원</span><strong id="approved">0</strong></div>
+      <div class="card"><span>기타</span><strong id="other">0</strong></div>
+    </section>
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2>승인 신청 대기자 <span id="applicationStatusCounts" class="help-text"></span></h2>
+        </div><button onclick="loadUsers()">새로고침</button>
+      </div>
+      <div class="table-wrap">
+        <table class="admin-table pending-member-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>아이디</th>
+              <th>이름</th>
+              <th>그룹</th>
+              <th>회사</th>
+              <th>사업장</th>
+              <th>부서</th>
+              <th>직무</th>
+              <th>전화</th>
+              <th>이메일</th>
+              <th>상태</th>
+              <th>신청 구분</th>
+              <th>요청 내용</th>
+              <th>가입일</th>
+              <th>최종 요청일</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="pendingTable"></tbody>
+        </table>
+      </div>
+      <p id="emptyPending" class="help-text hidden">현재 승인 대기 중인 신청이 없습니다.</p>
+    </section>
+    <section class="panel">
+      <div class="panel-title">
+        <div>
+          <h2>회원 리스트 <span id="statusCounts" class="help-text"></span></h2>
+          <p class="help-text">user_profile 테이블의 모든 회원이 표시됩니다.</p>
+        </div>
+        <input id="memberSearch" class="member-list-search" type="search" placeholder="전체 회원 검색" aria-label="전체 회원 검색">
+      </div>
+      <div class="table-wrap">
+        <table class="admin-table member-table">
+          <thead>
+            <tr>
+              <th><div class="member-column-heading"><span>ID</span><div id="memberFilterId" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>아이디</span><div id="memberFilterUsername" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>이름</span><div id="memberFilterName" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>그룹</span><div id="memberFilterGroup_name" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>회사</span><div id="memberFilterCompany_name" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>사업장</span><div id="memberFilterSite_name" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>부서</span><div id="memberFilterDepartment_name" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>직무</span><div id="memberFilterRole_name" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>권한등급</span><div id="memberFilterPermission_level" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>상태</span><div id="memberFilterStatus" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>가입일</span><div id="memberFilterCreated_at" class="member-column-filter"></div></div></th>
+              <th><div class="member-column-heading"><span>최종 변경일</span><div id="memberFilterUpdated_at" class="member-column-filter"></div></div></th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody id="userTable"></tbody>
+        </table>
+      </div>
+      <p id="emptyApproved" class="help-text hidden">회원이 없습니다.</p>
+    </section>
+    <section id="editPanel" class="panel hidden">
+      <h2>회원정보 수정</h2>
+      <form id="editForm" class="form-grid admin-edit-form" novalidate>
+        <input id="editId" type="hidden">
+        <div class="field"><label for="editUsername">아이디 *</label><input id="editUsername" required maxlength="50" disabled>
+        </div>
+        <div class="field"><label for="editName">이름</label><input id="editName" maxlength="100"></div>
+        <fieldset class="member-organization-edit full"><legend>회사 조직</legend><div class="member-organization-edit-grid">
+          <label for="editOrganizationGroup">그룹<select id="editOrganizationGroup" required><option value="">선택</option></select></label>
+          <label for="editOrganizationCompany">회사<select id="editOrganizationCompany" disabled><option value="">선택</option></select></label>
+          <label for="editOrganizationSite">사업장<select id="editOrganizationSite" disabled><option value="">선택</option></select></label>
+          <label for="editOrganizationDepartment">부서<select id="editOrganizationDepartment" disabled><option value="">선택</option></select></label>
+          <label for="editOrganizationRole">직무<select id="editOrganizationRole" disabled><option value="">선택</option></select></label>
+        </div></fieldset>
+        <div class="field"><label for="editPhone">전화번호</label><input id="editPhone"></div>
+        <div class="field full"><label for="editAddress">주소</label><input id="editAddress" maxlength="255" autocomplete="street-address"></div>
+        <div class="field"><label for="editEmail">이메일</label><input id="editEmail" type="email"></div>
+        <div class="field"><label for="editPermissionLevel">권한등급 *</label><select id="editPermissionLevel"
+            required></select></div>
+        <div class="field full"><label for="editAdminMemo">관리자 메모</label><textarea id="editAdminMemo" maxlength="5000"
+            rows="4" placeholder="회원 관리에 필요한 메모를 입력하세요."></textarea><small>회원에게는 표시되지 않습니다.</small></div>
+        <div class="field"><label for="editPassword">새 비밀번호</label><input id="editPassword" type="password"
+            minlength="4"><small>4자 이상 입력하세요. 변경하지 않으려면 비워두세요.</small></div>
+        <div class="full edit-actions"><button class="output-button admin-submit admin-form-action-button" type="submit">수정 저장</button><button
+          class="output-button admin-submit admin-form-action-button" type="button" onclick="closeEdit()">수정 취소</button><span id="editMessage" class="auth-message" role="status" aria-live="polite"></span></div>
+      </form>
+    </section>
+  </main>
+  <div id="memberActionMenu" class="member-action-menu" popover="auto" role="menu" aria-label="회원 관리"></div>
+  <dialog id="registrationRejectDialog" class="registration-dialog" aria-labelledby="registrationRejectTitle">
+    <form id="registrationRejectForm">
+      <h2 id="registrationRejectTitle">회원 처리 코멘트</h2>
+      <p id="registrationRejectUser"></p>
+      <p id="registrationProcessingRequest" class="registration-current-request" hidden></p>
+      <p id="registrationProcessingRestriction" class="auth-message error" role="alert" hidden></p>
+      <p id="registrationProcessingWarning" hidden>회원 삭제 후 복구할 수 없습니다.</p>
+      <label id="registrationProcessingLabel" for="registrationRejectComment">처리 코멘트 (선택)</label>
+      <textarea id="registrationRejectComment" rows="5" maxlength="2000"></textarea>
+      <h3>신청 이력</h3>
+      <div id="registrationProcessingHistory" class="registration-processing-history" aria-live="polite"></div>
+      <div class="registration-dialog-actions"><button id="registrationRejectCancel" type="button">취소</button><button id="registrationProcessingSubmit" type="submit">처리</button></div>
+    </form>
+  </dialog>
+  <dialog id="registrationHistoryDialog" class="registration-dialog" aria-labelledby="registrationHistoryTitle">
+    <form method="dialog" class="registration-history-heading"><h2 id="registrationHistoryTitle">가입 신청 이력</h2><button type="submit">닫기</button></form>
+    <div id="registrationHistoryContent"></div>
+    <div id="registrationHistoryActions" class="registration-dialog-actions"></div>
+  </dialog>
+  <script>
+    // 회원 관리: 현재 관리자와 회원 목록을 읽고, 작업 성공 후 목록을 다시 조회합니다.
+    // 화면에서 버튼을 제한하더라도 자기 자신·동급·상위 회원에 대한 최종 접근 검사는 서버가 담당합니다.
+    let users = [];
+    let currentAdminLevel = 20;
+    let currentAdminIsSystemMaster = false;
+    let currentAdminId = null;
+    const memberOrganizationFields = ['group', 'company', 'site', 'department', 'role'];
+    const memberFilterFields = ['id', 'username', 'name', 'group_name', 'company_name', 'site_name', 'department_name', 'role_name', 'permission_level', 'status', 'created_at', 'updated_at'];
+    const memberColumnFilters = new Map();
+    let memberSortState = null;
+    let memberActionTrigger = null;
+    let memberOrganizations = [];
+    const table = document.getElementById('userTable');
+    const pendingTable = document.getElementById('pendingTable');
+    const memberTableHead = document.querySelector('.member-table thead');
+
+    function memberManagementLevel(user) { return user?.role === 'MASTER' ? 26 : Number(user?.permission_level || user?.permissionLevel || 1); }
+
+    function pendingApplicationEntries(list) {
+      return list.flatMap(user => {
+        const entries = ['PENDING', 'REJECTED', 'WITHDRAWAL_PENDING'].includes(user.status) ? [{ user, request: null }] : [];
+        for (const request of user.pending_requests || []) entries.push({ user, request });
+        return entries;
+      });
+    }
+
+    function changeRequestLabel(request) { return { LEVEL_CHANGE_REQUEST: '등급변경', ORGANIZATION_CHANGE_REQUEST: '조직 변경' }[request?.event_type] || '변경 요청'; }
+
+    async function loadUsers() {
+      const res = await fetch('/api/admin/users');
+      if (res.status === 401) { location.href = '/user-login.html'; return; }
+      if (res.status === 403) { alert('마스터 권한이 필요합니다.'); location.href = '/'; return; }
+      users = await res.json();
+      const organizationResponse = await fetch('/api/admin/users/organizations');
+      if (organizationResponse.ok) memberOrganizations = (await organizationResponse.json()).organizations || [];
+      fillMemberOrganizationSelects();
+      const me = await fetch('/api/me');
+      if (me.ok) {
+        const meData = await me.json();
+        currentAdminIsSystemMaster = meData.user.role === 'MASTER';
+        currentAdminLevel = currentAdminIsSystemMaster ? 26 : Math.min(25, Number(meData.user.permission_level || meData.user.permissionLevel || 1));
+        currentAdminId = Number(meData.user.id);
+      }
+      const pendingEntries = pendingApplicationEntries(users);
+      const approvedUsers = users.filter(user => ['APPROVED', 'SUSPENDED'].includes(user.status));
+      const otherUsers = users.filter(user => !['PENDING', 'APPROVED', 'SUSPENDED'].includes(user.status));
+      document.getElementById('total').textContent = users.length;
+      document.getElementById('pending').textContent = pendingEntries.length;
+      document.getElementById('approved').textContent = approvedUsers.length;
+      document.getElementById('other').textContent = otherUsers.length;
+      document.getElementById('statusCounts').textContent = `대기 ${users.filter(user => user.status === 'PENDING').length}명 · 승인 ${users.filter(user => user.status === 'APPROVED').length}명 · 정지 ${users.filter(user => user.status === 'SUSPENDED').length}명 · 반려 ${users.filter(user => user.status === 'REJECTED').length}명 · 탈퇴신청 ${users.filter(user => user.status === 'WITHDRAWAL_PENDING').length}명`;
+      document.getElementById('applicationStatusCounts').textContent = `승인대기 ${users.filter(user => user.status === 'PENDING').length}명 · 반려 ${users.filter(user => user.status === 'REJECTED').length}명 · 등급변경 ${pendingEntries.filter(entry => entry.request?.event_type === 'LEVEL_CHANGE_REQUEST').length}건 · 조직 변경 ${pendingEntries.filter(entry => entry.request?.event_type === 'ORGANIZATION_CHANGE_REQUEST').length}건 · 탈퇴신청 ${users.filter(user => user.status === 'WITHDRAWAL_PENDING').length}명`;
+      document.getElementById('emptyPending').classList.toggle('hidden', pendingEntries.length > 0);
+      document.getElementById('emptyApproved').classList.toggle('hidden', users.length > 0);
+      pendingTable.innerHTML = pendingEntries.map(({ user, request }) => {
+        const kind = request ? changeRequestLabel(request) : user.status === 'WITHDRAWAL_PENDING' ? '탈퇴 신청' : '가입 신청';
+        return `<tr><td>${user.id}</td><td>${h(user.username)}</td><td>${h(user.name)}</td>${memberOrganizationCells(user)}<td>${h(user.phone)}</td><td>${h(user.email)}</td><td><span class="status ${user.status === 'APPROVED' ? 'done' : user.status === 'PENDING' ? 'waiting' : 'stop'}">${statusText(user.status)}</span></td><td>${h(kind)}</td><td class="pending-request-comment">${h(request?.comment || '-')}</td><td>${h(user.created_at || '-')}</td><td>${h(request?.created_at || user.user_request_at || user.created_at || '-')}</td><td class="admin-actions"><button type="button" class="member-action-trigger" data-member-actions="${user.id}" data-request-id="${h(request?.request_id || '')}" aria-label="${h(user.username)} ${h(kind)} 관리 메뉴" title="신청 관리" aria-haspopup="menu" aria-controls="memberActionMenu" aria-expanded="false"><span aria-hidden="true">&#8943;</span></button></td></tr>`;
+      }).join('');
+      memberRenderFilters();
+      renderMemberTable();
+    }
+
+    function memberFilterValue(user, field) {
+      if (field === 'permission_level') return String(Number(user.permission_level || 1));
+      if (field === 'created_at' || field === 'updated_at') return String(user[field] || '-');
+      if (field.endsWith('_name')) return `${user[field] || ''} ${user[`organization_${field.slice(0, -5)}_code`] || ''}`.trim();
+      return String(user[field] ?? '');
+    }
+
+    function memberFilterLabel(user, field) {
+      const value = memberFilterValue(user, field);
+      if (field === 'permission_level') return `${value}등급`;
+      if (field === 'status') return statusText(value);
+      return value;
+    }
+
+    function memberOrganizationCells(user) {
+      return memberOrganizationFields.map(field => {
+        const name = user[`${field}_name`] || '-';
+        const code = user[`organization_${field}_code`];
+        return `<td class="member-organization-cell"><strong>${h(name)}</strong>${code ? `<small>${h(code)}</small>` : ''}</td>`;
+      }).join('');
+    }
+
+    function memberApplyColumnFilter(rows, field) {
+      const selected = memberColumnFilters.get(field);
+      return selected ? rows.filter(user => selected.has(memberFilterValue(user, field))) : rows;
+    }
+
+    function fillMemberOrganizationSelects(selectedCodes = memberOrganizationFields.map(() => '')) {
+      for (const [index, field] of memberOrganizationFields.entries()) {
+        const select = document.getElementById(`editOrganization${field[0].toUpperCase()}${field.slice(1)}`);
+        const parentFields = memberOrganizationFields.slice(0, index);
+        const parentsReady = Boolean(selectedCodes[0]);
+        const available = memberOrganizations.filter(organization => parentFields.every(parent => (organization[`${parent}_code`] ?? '') === (selectedCodes[memberOrganizationFields.indexOf(parent)] ?? '')));
+        const options = new Map(available.filter(organization => organization[`${field}_code`] != null).map(organization => [organization[`${field}_code`], `${organization[`${field}_name`] || organization[`${field}_code`]} (${organization[`${field}_code`]})${Number(organization.is_active) === 1 ? '' : ' · 사용 중지'}`]));
+        select.innerHTML = `<option value="">${index === 0 ? '선택' : '미지정'}</option>` + [...options].map(([code, label]) => `<option value="${h(code)}">${h(label)}</option>`).join('');
+        select.disabled = index > 0 && !parentsReady;
+        select.value = options.has(selectedCodes[index]) ? selectedCodes[index] : '';
+      }
+    }
+
+    function memberSelectedOrganizationId() {
+      const codes = memberOrganizationFields.map(field => document.getElementById(`editOrganization${field[0].toUpperCase()}${field.slice(1)}`).value);
+      if (!codes[0]) return { error: '그룹을 선택하세요.' };
+      const organization = memberOrganizations.find(item => memberOrganizationFields.every((field, index) => (item[`${field}_code`] ?? '') === codes[index]));
+      if (organization) return { organizationId: Number(organization.organization_id) };
+      return { error: '선택한 조직 조합이 등록되어 있지 않습니다.' };
+    }
+
+    function memberSortUsers(rows) {
+      if (!memberSortState) return rows;
+      const { field, direction } = memberSortState;
+      const multiplier = direction === 'desc' ? -1 : 1;
+      const collator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
+      return rows.sort((left, right) => {
+        const leftValue = field === 'id' || field === 'permission_level' ? Number(memberFilterValue(left, field)) : field === 'status' ? statusText(left.status) : memberFilterValue(left, field);
+        const rightValue = field === 'id' || field === 'permission_level' ? Number(memberFilterValue(right, field)) : field === 'status' ? statusText(right.status) : memberFilterValue(right, field);
+        const comparison = typeof leftValue === 'number' ? leftValue - rightValue : collator.compare(leftValue, rightValue);
+        return (comparison || Number(left.id) - Number(right.id)) * multiplier;
+      });
+    }
+
+    function memberRenderFilters(startIndex = 0) {
+      const search = document.getElementById('memberSearch').value.trim().toLowerCase();
+      let availableUsers = users.filter(user => !search || memberFilterFields.some(field => `${memberFilterValue(user, field)} ${memberFilterLabel(user, field)}`.toLowerCase().includes(search)));
+      for (const [index, field] of memberFilterFields.entries()) {
+        if (index < startIndex) {
+          availableUsers = memberApplyColumnFilter(availableUsers, field);
+          continue;
+        }
+        const container = document.getElementById(`memberFilter${field[0].toUpperCase()}${field.slice(1)}`);
+        const values = new Map();
+        for (const user of availableUsers) values.set(memberFilterValue(user, field), memberFilterLabel(user, field));
+        let selected = memberColumnFilters.get(field);
+        if (selected) {
+          const availableValues = new Set(values.keys());
+          const retained = new Set([...selected].filter(value => availableValues.has(value)));
+          if (retained.size !== selected.size) {
+            if (selected.size > 0 && retained.size === 0) memberColumnFilters.delete(field);
+            else memberColumnFilters.set(field, retained);
+            selected = memberColumnFilters.get(field);
+          }
+        }
+        const allSelected = !selected || (values.size > 0 && selected.size === values.size);
+        const options = [...values].sort((left, right) => left[1].localeCompare(right[1], 'ko')).map(([value, label]) => `<label class="member-filter-option" data-filter-label="${h(label.toLowerCase())}"><input type="checkbox" data-member-filter="${field}" value="${h(value)}"${allSelected || selected.has(value) ? ' checked' : ''}><span>${h(label)}</span></label>`).join('');
+        const labels = { id: 'ID', username: '아이디', name: '이름', permission_level: '권한등급', status: '상태', created_at: '가입일', updated_at: '최종 변경일' };
+        const applied = Boolean(selected && (selected.size !== values.size || selected.size === 0));
+        const sortButtons = ['asc', 'desc'].map(direction => `<button type="button" data-member-sort="${field}" data-sort-direction="${direction}" aria-pressed="${memberSortState?.field === field && memberSortState.direction === direction}">${direction === 'asc' ? '오름차순' : '내림차순'}</button>`).join('');
+        container.innerHTML = `<button type="button" class="member-filter-trigger${applied ? ' is-filtered' : ''}" data-member-filter-toggle="${field}" aria-label="${labels[field]} 값 필터" aria-expanded="false" title="${labels[field]} 값 필터"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14l-5.5 6.3v4.2l-3 1.5v-5.7L3 4Z"/></svg></button><div class="member-filter-menu" hidden><div class="member-filter-sort-actions">${sortButtons}</div><input type="search" class="member-filter-search" data-member-filter-search="${field}" placeholder="값 검색" aria-label="필터 값 검색"><label class="member-filter-option member-filter-all"><input type="checkbox" data-member-filter-all="${field}"${allSelected ? ' checked' : ''}><span>모든 값</span></label><div class="member-filter-options">${options}</div></div>`;
+        availableUsers = memberApplyColumnFilter(availableUsers, field);
+      }
+    }
+
+    function memberCloseFilters() {
+      for (const menu of document.querySelectorAll('.member-filter-menu:not([hidden])')) {
+        menu.hidden = true;
+        menu.parentElement.querySelector('[data-member-filter-toggle]').setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    function memberPositionFilterMenu(trigger, menu) {
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      const bounds = trigger.getBoundingClientRect();
+      menu.style.left = `${Math.max(8, Math.min(bounds.left, innerWidth - Math.min(menu.offsetWidth, 260) - 8))}px`;
+      menu.style.top = `${Math.max(8, Math.min(bounds.bottom, innerHeight - Math.min(menu.offsetHeight, 340) - 8))}px`;
+    }
+
+    function memberUpdateFilterTrigger(field, selected, optionCount) {
+      const trigger = document.querySelector(`[data-member-filter-toggle="${field}"]`);
+      if (!trigger) return;
+      const labels = { id: 'ID', username: '아이디', name: '이름', permission_level: '권한등급', status: '상태', created_at: '가입일', updated_at: '최종 변경일' };
+      const applied = Boolean(selected && (selected.size !== optionCount || selected.size === 0));
+      trigger.classList.toggle('is-filtered', applied);
+      trigger.title = applied ? `${labels[field]} 필터 적용 중 (${selected.size}/${optionCount})` : `${labels[field]} 값 필터`;
+      trigger.setAttribute('aria-label', trigger.title);
+    }
+
+    function memberActionItems(user, { pending = false, request = null } = {}) {
+      const actions = [];
+      const lowerLevel = memberManagementLevel(user) < currentAdminLevel;
+      if (pending && request) {
+        if (lowerLevel) {
+          actions.push({ label: '요청 승인', run: () => resolveRequest(user.id, request.request_id, 'APPROVED') });
+          actions.push({ label: '요청 반려', run: () => resolveRequest(user.id, request.request_id, 'REJECTED'), destructive: true });
+        }
+      } else if (user.status === 'PENDING' || (pending && user.status === 'REJECTED')) {
+        if (lowerLevel) {
+          actions.push({ label: '승인', run: () => changeStatus(user.id, 'APPROVED') });
+          actions.push({ label: '반려', run: () => changeStatus(user.id, 'REJECTED'), destructive: true });
+        }
+      }
+      if (!request && user.status === 'WITHDRAWAL_PENDING' && lowerLevel) {
+        actions.push({ label: '탈퇴 반려', run: () => changeStatus(user.id, 'APPROVED') });
+        actions.push({ label: '탈퇴 승인', run: () => deleteUser(user.id, 'WITHDRAWAL_APPROVAL'), destructive: true });
+      }
+      if (!pending && ['APPROVED', 'SUSPENDED'].includes(user.status) && lowerLevel) actions.push({ label: user.status === 'SUSPENDED' ? '재승인' : '정지', run: () => changeStatus(user.id, user.status === 'SUSPENDED' ? 'APPROVED' : 'SUSPENDED'), destructive: user.status === 'APPROVED' });
+      if (lowerLevel) actions.push({ label: '삭제', run: () => deleteUser(user.id), destructive: true });
+      if (lowerLevel || Number(user.id) === currentAdminId) actions.push({ label: '수정', run: () => openEdit(user.id) });
+      actions.push({ label: '신청 이력', run: () => showRegisterComments(user.id, request?.request_id) });
+      return actions;
+    }
+
+    function closeMemberActions(restoreFocus = false) {
+      const menu = document.getElementById('memberActionMenu');
+      if (menu.matches(':popover-open')) menu.hidePopover();
+      memberActionTrigger?.setAttribute('aria-expanded', 'false');
+      if (restoreFocus && memberActionTrigger?.isConnected) memberActionTrigger.focus();
+      memberActionTrigger = null;
+    }
+
+    function openMemberActions(trigger, id) {
+      const menu = document.getElementById('memberActionMenu');
+      const sameTrigger = memberActionTrigger === trigger && menu.matches(':popover-open');
+      closeMemberActions();
+      if (sameTrigger) return;
+      const user = users.find(item => Number(item.id) === Number(id));
+      if (!user) return;
+      const pending = Boolean(trigger.closest('#pendingTable'));
+      const requestId = trigger.dataset.requestId;
+      const request = requestId ? user.pending_requests?.find(item => String(item.request_id) === String(requestId)) : null;
+      if (requestId && !request) return;
+      memberCloseFilters();
+      menu.replaceChildren();
+      for (const action of memberActionItems(user, { pending, request })) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.setAttribute('role', 'menuitem');
+        button.tabIndex = -1;
+        button.textContent = action.label;
+        button.classList.toggle('is-destructive', Boolean(action.destructive));
+        button.addEventListener('click', () => { closeMemberActions(true); void action.run(); });
+        menu.append(button);
+      }
+      memberActionTrigger = trigger;
+      trigger.setAttribute('aria-expanded', 'true');
+      menu.showPopover({ source: trigger });
+      const bounds = trigger.getBoundingClientRect();
+      menu.style.left = `${Math.max(8, Math.min(bounds.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 8))}px`;
+      menu.style.top = `${Math.max(8, Math.min(bounds.bottom + 4, innerHeight - menu.offsetHeight - 8))}px`;
+      menu.querySelector('button')?.focus();
+    }
+
+    function renderMemberTable() {
+      closeMemberActions();
+      const search = document.getElementById('memberSearch').value.trim().toLowerCase();
+      const visibleUsers = users.filter(user => {
+        if (search && !memberFilterFields.some(field => `${memberFilterValue(user, field)} ${memberFilterLabel(user, field)}`.toLowerCase().includes(search))) return false;
+        return memberFilterFields.every(field => {
+          const selected = memberColumnFilters.get(field);
+          return !selected || selected.has(memberFilterValue(user, field));
+        });
+      });
+      memberSortUsers(visibleUsers);
+      table.innerHTML = visibleUsers.map(user => `<tr><td>${user.id}</td><td>${h(user.username)}</td><td>${h(user.name)}</td>${memberOrganizationCells(user)}<td>${Number(user.permission_level || 1)}등급</td><td><span class="status ${user.status === 'APPROVED' ? 'done' : user.status === 'PENDING' ? 'waiting' : 'stop'}">${statusText(user.status)}</span></td><td>${h(user.created_at || '-')}</td><td>${h(user.updated_at || '-')}</td><td class="admin-actions"><button type="button" class="member-action-trigger" data-member-actions="${user.id}" aria-label="${h(user.username)} 관리 메뉴" title="회원 관리" aria-haspopup="menu" aria-controls="memberActionMenu" aria-expanded="false"><span aria-hidden="true">&#8943;</span></button></td></tr>`).join('');
+      const empty = document.getElementById('emptyApproved');
+      empty.textContent = users.length && visibleUsers.length === 0 ? '필터 조건에 맞는 회원이 없습니다.' : '회원이 없습니다.';
+      empty.classList.toggle('hidden', visibleUsers.length > 0);
+    }
+
+    function statusText(status) { return { PENDING: '승인대기', APPROVED: '승인', REJECTED: '반려', SUSPENDED: '정지', WITHDRAWAL_PENDING: '탈퇴신청' }[status] || status; }
+
+    function requestDecisionRestriction(user) {
+      if (Number(user.id) === currentAdminId) return '본인의 요청은 직접 처리할 수 없습니다.';
+      if (memberManagementLevel(user) >= currentAdminLevel) return '자신보다 낮은 등급의 회원 요청만 처리할 수 있습니다.';
+      if (user.status !== 'APPROVED') return '승인 상태의 회원 요청만 처리할 수 있습니다.';
+      return '';
+    }
+
+    function requestProcessingComment(user, action, required = false, destructive = false, request = null) {
+      const dialog = document.getElementById('registrationRejectDialog');
+      const form = document.getElementById('registrationRejectForm');
+      const comment = document.getElementById('registrationRejectComment');
+      const cancel = document.getElementById('registrationRejectCancel');
+      const submit = document.getElementById('registrationProcessingSubmit');
+      const history = document.getElementById('registrationProcessingHistory');
+      const currentRequest = document.getElementById('registrationProcessingRequest');
+      const restriction = request ? requestDecisionRestriction(user) : '';
+      const restrictionMessage = document.getElementById('registrationProcessingRestriction');
+      restrictionMessage.textContent = restriction;
+      restrictionMessage.hidden = !restriction;
+      document.getElementById('registrationRejectTitle').textContent = `${action} 코멘트`;
+      document.getElementById('registrationRejectUser').textContent = `${user.username} (${user.name || '-'}) · ${statusText(user.status)}`;
+      currentRequest.hidden = !request;
+      currentRequest.textContent = request ? `${changeRequestLabel(request)} · ${request.created_at || '-'}\n${request.comment || ''}` : '';
+      document.getElementById('registrationProcessingLabel').textContent = required ? '반려 사유 *' : '처리 코멘트 (선택)';
+      document.getElementById('registrationProcessingSubmit').textContent = action;
+      document.getElementById('registrationProcessingSubmit').classList.toggle('is-destructive', destructive || required || action === '사용 정지');
+      document.getElementById('registrationProcessingWarning').hidden = !destructive;
+      comment.required = required;
+      comment.value = '';
+      return new Promise(resolve => {
+        let active = true;
+        submit.disabled = true;
+        const finish = value => { active = false; form.onsubmit = null; dialog.oncancel = null; cancel.onclick = null; dialog.close(); resolve(value); };
+        form.onsubmit = event => {
+          event.preventDefault();
+          if (submit.disabled) return;
+          if (required && !comment.value.trim()) { comment.setCustomValidity('반려 사유를 입력하세요.'); comment.reportValidity(); return; }
+          if (comment.value.trim().length > 2000) { comment.setCustomValidity('코멘트는 2000자 이내로 입력하세요.'); comment.reportValidity(); return; }
+          comment.setCustomValidity('');
+          finish(comment.value.trim());
+        };
+        comment.oninput = () => comment.setCustomValidity('');
+        cancel.onclick = () => finish(null);
+        dialog.oncancel = event => { event.preventDefault(); finish(null); };
+        comment.setCustomValidity('');
+        dialog.showModal();
+        comment.focus();
+        void window.loadRegistrationHistory(history, `/api/admin/users/${user.id}/register-comments`).then(loaded => { if (active) submit.disabled = Boolean(restriction) || !loaded; });
+      });
+    }
+
+    async function showRegisterComments(id, requestId) {
+      const user = users.find(item => Number(item.id) === Number(id));
+      const dialog = document.getElementById('registrationHistoryDialog');
+      const actions = document.getElementById('registrationHistoryActions');
+      actions.replaceChildren();
+      document.getElementById('registrationHistoryTitle').textContent = `신청 처리 이력 · ${user?.username || id}`;
+      dialog.showModal();
+      const loaded = await window.loadRegistrationHistory(document.getElementById('registrationHistoryContent'), `/api/admin/users/${id}/register-comments`);
+      if (!loaded || !dialog.open || !user) return;
+      const canManage = Number(user.id) !== currentAdminId && memberManagementLevel(user) < currentAdminLevel;
+      const addAction = (label, handler) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.addEventListener('click', () => { dialog.close(); void handler(); });
+        actions.append(button);
+      };
+      for (const request of user.pending_requests || []) {
+        if (requestId && String(request.request_id) !== String(requestId)) continue;
+        addAction(`${changeRequestLabel(request)} 요청 승인`, () => resolveRequest(user.id, request.request_id, 'APPROVED'));
+        addAction(`${changeRequestLabel(request)} 요청 반려`, () => resolveRequest(user.id, request.request_id, 'REJECTED'));
+      }
+      if (canManage && !requestId && ['PENDING', 'REJECTED'].includes(user.status)) {
+        addAction('승인', () => changeStatus(user.id, 'APPROVED'));
+        addAction('반려', () => changeStatus(user.id, 'REJECTED'));
+      }
+      if (canManage && !requestId && user.status === 'WITHDRAWAL_PENDING') {
+        addAction('탈퇴 반려', () => changeStatus(user.id, 'APPROVED'));
+        addAction('탈퇴 승인', () => deleteUser(user.id, 'WITHDRAWAL_APPROVAL'));
+      }
+    }
+
+    function h(value) { return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;'); }
+
+    async function changeStatus(id, status) {
+      const user = users.find(item => Number(item.id) === Number(id));
+      if (!user) return;
+      const action = status === 'APPROVED' && user.status === 'WITHDRAWAL_PENDING' ? '탈퇴 반려' : { APPROVED: '승인', REJECTED: '가입 신청 반려', SUSPENDED: '사용 정지', PENDING: '승인대기 변경' }[status] || '상태 변경';
+      const comment = await requestProcessingComment(user, action, status === 'REJECTED');
+      if (comment === null) return;
+      const res = await fetch(`/api/admin/users/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, comment }) });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || '처리 실패'); return; }
+      await loadUsers();
+    }
+
+    async function resolveRequest(id, requestId, status) {
+      const user = users.find(item => Number(item.id) === Number(id));
+      const request = user?.pending_requests?.find(item => String(item.request_id) === String(requestId));
+      if (!request) return;
+      const comment = await requestProcessingComment(user, `${changeRequestLabel(request)} 요청 ${status === 'APPROVED' ? '승인' : '반려'}`, status === 'REJECTED', false, request);
+      if (comment === null) return;
+      const res = await fetch(`/api/admin/users/${id}/requests/${encodeURIComponent(requestId)}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status, comment }) });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || '요청 처리 실패'); return; }
+      await loadUsers();
+    }
+
+    async function deleteUser(id, action = 'DELETE') {
+      const user = users.find(item => Number(item.id) === Number(id));
+      if (!user) return;
+      const comment = await requestProcessingComment(user, action === 'WITHDRAWAL_APPROVAL' ? '탈퇴 승인' : '회원 삭제', false, true);
+      if (comment === null) return;
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, comment }) });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || '삭제 실패'); return; }
+      await loadUsers();
+    }
+
+    function fillMemberPermissionLevels(selectedLevel = Number(document.getElementById('editPermissionLevel').value) || 1) {
+      const user = users.find(item => Number(item.id) === Number(document.getElementById('editId').value));
+      const isSelf = Number(user?.id) === currentAdminId;
+      const maximumAssignableLevel = (currentAdminIsSystemMaster ? 25 : currentAdminLevel) - 1;
+      const groupMaximumLevel = document.getElementById('editOrganizationGroup').value === 'ZZZ' ? 25 : 20;
+      const maximumLevel = Math.min(groupMaximumLevel, isSelf ? Number(user.permission_level || 1) : maximumAssignableLevel);
+      const permissionLevels = isSelf ? [maximumLevel] : Array.from({ length: maximumLevel }, (_, index) => index + 1);
+      const select = document.getElementById('editPermissionLevel');
+      select.innerHTML = permissionLevels.map(level => `<option value="${level}">${level}등급</option>`).join('');
+      select.value = Math.min(selectedLevel, maximumLevel);
+      select.disabled = isSelf;
+    }
+
+    function openEdit(id) {
+      const user = users.find(item => item.id === id);
+      if (!user) return;
+      clearFieldValidation();
+      const isSelf = Number(user.id) === currentAdminId;
+      if (!isSelf && memberManagementLevel(user) >= currentAdminLevel) {
+        const message = document.getElementById('editMessage');
+        message.textContent = '자신보다 낮은 등급의 회원만 수정할 수 있습니다.';
+        message.className = 'auth-message error';
+        return;
+      }
+      document.getElementById('editPanel').classList.remove('hidden');
+      document.getElementById('editMessage').textContent = '';
+      document.getElementById('editMessage').className = 'auth-message';
+      [['editId', 'id'], ['editUsername', 'username'], ['editName', 'name'], ['editPhone', 'phone'], ['editAddress', 'address'], ['editEmail', 'email']].forEach(([field, key]) => { document.getElementById(field).value = user[key] || ''; });
+      fillMemberOrganizationSelects(memberOrganizationFields.map(field => user[`organization_${field}_code`] || ''));
+      document.getElementById('editAdminMemo').value = user.admin_memo || '';
+      fillMemberPermissionLevels(Number(user.permission_level || 1));
+      document.getElementById('editPassword').value = '';
+      scrollTo({ top: document.getElementById('editPanel').offsetTop, behavior: 'smooth' });
+    }
+
+    function closeEdit() { clearFieldValidation(); document.getElementById('editPanel').classList.add('hidden'); }
+    document.getElementById('editForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      const id = document.getElementById('editId').value;
+      const organization = memberSelectedOrganizationId();
+      const message = document.getElementById('editMessage');
+      const invalidField = [...event.currentTarget.querySelectorAll('input,select,textarea')].find(field => !field.disabled && !field.checkValidity());
+      if (invalidField) { message.textContent = invalidField.validationMessage; message.className = 'auth-message error'; showFieldValidation(invalidField, invalidField.validationMessage); return; }
+      if (organization.error) { message.textContent = organization.error; message.className = 'auth-message error'; showFieldValidation('editOrganizationGroup', organization.error); return; }
+      const selectedGroupCode = document.getElementById('editOrganizationGroup').value.trim().toUpperCase();
+      if (selectedGroupCode !== 'ZZZ' && Number(editPermissionLevel.value) > 20) {
+        message.textContent = 'ZZZ가 아닌 그룹은 최고 권한등급이 20입니다.'; message.className = 'auth-message error';
+        showFieldValidation('editPermissionLevel', message.textContent);
+        return;
+      }
+      const body = { name: editName.value, organizationId: organization.organizationId, phone: editPhone.value, address: editAddress.value, email: editEmail.value, permissionLevel: editPermissionLevel.value, adminMemo: editAdminMemo.value, password: editPassword.value };
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) {
+        message.textContent = data.error || '수정 실패'; message.className = 'auth-message error';
+        const fieldIds = { name: 'editName', phone: 'editPhone', address: 'editAddress', email: 'editEmail', password: 'editPassword', permissionLevel: 'editPermissionLevel', adminMemo: 'editAdminMemo', organizationId: 'editOrganizationGroup' };
+        if (data.field && fieldIds[data.field]) showFieldValidation(fieldIds[data.field], message.textContent);
+        return;
+      }
+      clearFieldValidation();
+      message.textContent = data.message; message.className = 'auth-message success';
+      setTimeout(() => { closeEdit(); loadUsers(); }, 700);
+    });
+    async function logout() { document.getElementById('editPassword').value = ''; await fetch('/api/logout', { method: 'POST' }); location.href = '/user-login.html?logged_out=1'; }
+    document.getElementById('memberSearch').addEventListener('input', () => { memberRenderFilters(); renderMemberTable(); });
+    for (const target of [table, pendingTable]) target.addEventListener('click', event => {
+      const trigger = event.target.closest('[data-member-actions]');
+      if (trigger) openMemberActions(trigger, trigger.dataset.memberActions);
+    });
+    const actionMenu = document.getElementById('memberActionMenu');
+    actionMenu.addEventListener('toggle', event => {
+      if (event.newState === 'closed' && !actionMenu.matches(':popover-open')) closeMemberActions();
+    });
+    actionMenu.addEventListener('keydown', event => {
+      const buttons = [...actionMenu.querySelectorAll('button')];
+      const index = buttons.indexOf(document.activeElement);
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next]?.focus();
+      }
+      if (event.key === 'Escape' || event.key === 'Tab') { if (event.key === 'Escape') event.preventDefault(); closeMemberActions(true); }
+    });
+    window.addEventListener('scroll', event => { if (!(event.target instanceof Node) || !actionMenu.contains(event.target)) closeMemberActions(); }, true);
+    window.addEventListener('resize', () => closeMemberActions());
+    for (const [index, field] of memberOrganizationFields.entries()) {
+      document.getElementById(`editOrganization${field[0].toUpperCase()}${field.slice(1)}`).addEventListener('change', () => {
+        const codes = memberOrganizationFields.map(name => document.getElementById(`editOrganization${name[0].toUpperCase()}${name.slice(1)}`).value);
+        for (let next = index + 1; next < codes.length; next++) codes[next] = '';
+        fillMemberOrganizationSelects(codes);
+        if (index === 0) fillMemberPermissionLevels();
+      });
+    }
+    memberTableHead.addEventListener('change', event => {
+      const field = event.target.dataset.memberFilter;
+      const selectAllField = event.target.dataset.memberFilterAll;
+      if (selectAllField) {
+        const options = [...document.querySelectorAll(`[data-member-filter="${selectAllField}"]`)];
+        if (event.target.checked) {
+          memberColumnFilters.delete(selectAllField);
+          options.forEach(input => { input.checked = true; });
+        } else {
+          memberColumnFilters.set(selectAllField, new Set());
+          options.forEach(input => { input.checked = false; });
+        }
+        memberUpdateFilterTrigger(selectAllField, memberColumnFilters.get(selectAllField), options.length);
+        memberRenderFilters(memberFilterFields.indexOf(selectAllField) + 1);
+        renderMemberTable();
+        return;
+      }
+      if (!field) return;
+      const selected = new Set([...document.querySelectorAll(`[data-member-filter="${field}"]:checked`)].map(input => input.value));
+      const optionCount = document.querySelectorAll(`[data-member-filter="${field}"]`).length;
+      if (selected.size === optionCount) memberColumnFilters.delete(field);
+      else memberColumnFilters.set(field, selected);
+      const menu = event.target.closest('.member-filter-menu');
+      menu.querySelector('[data-member-filter-all]').checked = selected.size === optionCount;
+      memberUpdateFilterTrigger(field, memberColumnFilters.get(field), optionCount);
+      memberRenderFilters(memberFilterFields.indexOf(field) + 1);
+      renderMemberTable();
+    });
+    memberTableHead.addEventListener('input', event => {
+      const field = event.target.dataset.memberFilterSearch;
+      if (!field) return;
+      const search = event.target.value.trim().toLowerCase();
+      for (const option of document.querySelectorAll(`#memberFilter${field[0].toUpperCase()}${field.slice(1)} .member-filter-option[data-filter-label]`)) option.hidden = !option.dataset.filterLabel.includes(search);
+    });
+    memberTableHead.addEventListener('click', event => {
+      const sortButton = event.target.closest('[data-member-sort]');
+      if (sortButton) {
+        memberSortState = { field: sortButton.dataset.memberSort, direction: sortButton.dataset.sortDirection };
+        memberCloseFilters();
+        memberRenderFilters();
+        renderMemberTable();
+        return;
+      }
+      const trigger = event.target.closest('[data-member-filter-toggle]');
+      if (!trigger) return;
+      const menu = trigger.parentElement.querySelector('.member-filter-menu');
+      const wasOpen = !menu.hidden;
+      memberCloseFilters();
+      if (!wasOpen) memberPositionFilterMenu(trigger, menu);
+    });
+    document.addEventListener('pointerdown', event => { if (!event.target.closest('.member-column-filter')) memberCloseFilters(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') memberCloseFilters(); });
+    window.addEventListener('scroll', memberCloseFilters, true);
+    window.addEventListener('resize', memberCloseFilters);
+    loadUsers();
+  </script>
+</body>
+
+</html>

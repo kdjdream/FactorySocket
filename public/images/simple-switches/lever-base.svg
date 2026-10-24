@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 120">
+  <defs>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#334450"/><stop offset=".28" stop-color="#c3d1da"/>
+      <stop offset=".5" stop-color="#8a9eac"/><stop offset="1" stop-color="#293d4b"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2=".25" y2="1">
+      <stop stop-color="#fff"/><stop offset=".38" stop-color="#d4e0e8"/>
+      <stop offset=".7" stop-color="#91a6b5"/><stop offset="1" stop-color="#4e6576"/>
+    </linearGradient>
+    <radialGradient id="socket" cx=".5" cy=".65">
+      <stop stop-color="#708a9e"/><stop offset=".65" stop-color="#344d60"/>
+      <stop offset="1" stop-color="#152735"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="49" cy="106" rx="29" ry="7" fill="#14202b" opacity=".28"/>
+  <path d="M21 90v10c0 17 54 17 54 0V90Z" fill="url(#edge)" stroke="#304453" stroke-width="1.5"/>
+  <ellipse cx="48" cy="90" rx="27" ry="14" fill="url(#rim)" stroke="#405969" stroke-width="1.5"/>
+  <ellipse cx="48" cy="90" rx="19" ry="10" fill="none" stroke="#f4f9fc" opacity=".75"/>
+  <ellipse cx="48" cy="90" rx="15" ry="8" fill="url(#socket)" stroke="#506b7e"/>
+  <path d="M25 97q23 13 46 0" fill="none" stroke="#d9e5ed" stroke-width="1.5" opacity=".6"/>
+</svg>

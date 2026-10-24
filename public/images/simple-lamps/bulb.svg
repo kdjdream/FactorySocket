@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs><mask id="filament"><path fill="#fff" d="M0 0h120v120H0z"/><path d="m46 48 8 12h12l8-12M54 60v28m12-28v28" fill="none" stroke="#000" stroke-width="3"/></mask></defs>
+  <path mask="url(#filament)" d="M60 15c-23 0-38 16-38 37 0 15 8 24 17 34v6h42v-6c9-10 17-19 17-34 0-21-15-37-38-37Z"/>
+  <path d="M40 96h40v6H40zm2 9h36v6H42zm8 9h20l-4 5H54Z"/>
+</svg>

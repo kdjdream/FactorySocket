@@ -1,0 +1,277 @@
+.company-entry-section {
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--factory-line);
+}
+.company-section-heading,
+.company-form-actions,
+.company-list-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.company-section-heading {
+  margin-bottom: 12px;
+}
+.company-section-heading h2 {
+  margin: 0 0 4px;
+  font-size: 19px;
+}
+.company-form-hint {
+  margin: 0 0 12px;
+  padding: 8px 11px;
+  border-left: 3px solid var(--factory-green);
+  background: var(--factory-ground);
+  color: var(--factory-ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.company-form-hint strong {
+  margin-right: 5px;
+  color: var(--factory-green);
+}
+#companyCount {
+  font-size: 12px;
+  color: var(--factory-muted);
+}
+#companyForm {
+  max-width: 840px;
+}
+.company-field-row {
+  display: grid;
+  grid-template-columns: 80px 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.company-field-row label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.company-field-heading {
+  color: var(--factory-muted);
+  font-size: 11px;
+}
+.company-field-row input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+.company-field-row input[id^="companyCode"] {
+  text-align: center;
+  text-transform: uppercase;
+  font-family: monospace;
+}
+.company-field-row input[readonly] {
+  background: var(--factory-ground);
+  color: var(--factory-muted);
+}
+.company-form-actions {
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+.company-active-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  font-size: 13px;
+}
+.company-active-label input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--factory-green);
+}
+.company-admin-page button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--factory-line);
+  border-radius: 4px;
+  background: var(--factory-surface);
+  color: var(--factory-ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.company-admin-page #companySave {
+  min-width: 110px;
+  background: var(--factory-green);
+  color: var(--factory-surface);
+  border-color: var(--factory-green);
+}
+.company-admin-page button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.company-admin-page [hidden] {
+  display: none !important;
+}
+.company-message {
+  min-height: 20px;
+  margin: 10px 0 0;
+  color: var(--factory-green);
+  font-size: 13px;
+}
+.company-message[data-error="true"] {
+  color: var(--factory-coral);
+}
+.company-list-tools input {
+  box-sizing: border-box;
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 13px;
+}
+.company-list-tools input {
+  width: 240px;
+  max-width: 100%;
+}
+.company-table-wrap {
+  border: 1px solid var(--factory-line);
+  border-radius: 4px;
+}
+body .company-table {
+  width: 100%;
+  min-width: 1200px;
+  table-layout: fixed;
+  background: var(--factory-surface);
+}
+.company-table th:first-child { width: 7%; }
+.company-table th:nth-child(n+2):nth-child(-n+6) { width: 13%; }
+.company-table th:nth-child(7) { width: 10%; }
+.company-table th:nth-child(8) { width: 18%; }
+body .company-table th,
+body .company-table td {
+  padding: 10px;
+  text-align: left;
+  font-size: 13px;
+}
+.company-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--factory-muted);
+  font-size: 11px;
+}
+.company-table code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.company-column-filter {
+  display: inline-flex;
+  align-items: center;
+}
+.company-column-heading {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.company-admin-page .company-filter-trigger {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 4px;
+  border: 1px solid var(--factory-line);
+  border-radius: 3px;
+  color: var(--factory-muted);
+  line-height: 1;
+}
+.company-filter-trigger svg {
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+}
+.company-admin-page .company-filter-trigger.is-filtered {
+  border-color: var(--factory-green);
+  background: var(--factory-green);
+  color: var(--factory-surface);
+}
+.company-filter-menu {
+  position: fixed;
+  z-index: 30;
+  display: grid;
+  gap: 7px;
+  width: min(250px, calc(100vw - 24px));
+  max-height: min(320px, calc(100vh - 24px));
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--factory-line);
+  border-radius: 4px;
+  background: var(--factory-surface);
+  color: var(--factory-ink);
+  box-shadow: 0 5px 18px rgb(0 0 0 / 18%);
+}
+.company-filter-sort-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.company-admin-page .company-filter-sort-actions button {
+  min-height: 32px;
+  padding: 6px;
+  font-size: 12px;
+}
+.company-admin-page .company-filter-sort-actions button[aria-pressed="true"] {
+  border-color: var(--factory-green);
+  background: var(--factory-green-soft);
+  color: var(--factory-ink);
+}
+.company-filter-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+}
+.company-filter-options {
+  display: grid;
+  gap: 2px;
+}
+.company-filter-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 5px 3px;
+  color: var(--factory-ink);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.company-filter-option input {
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--factory-green);
+}
+.company-filter-option span {
+  overflow-wrap: anywhere;
+}
+.company-filter-option[hidden] {
+  display: none !important;
+}
+.company-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+@media (max-width: 600px) {
+  .company-field-row {
+    grid-template-columns: 48px 72px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .company-field-row input {
+    padding: 8px 5px;
+    font-size: 13px;
+  }
+  .company-list-tools {
+    width: 100%;
+  }
+  .company-list-tools input {
+    width: 100%;
+  }
+}
